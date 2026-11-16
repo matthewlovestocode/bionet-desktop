@@ -16,10 +16,10 @@
     "local:status": "node scripts/local-packages.mjs"
   },
   "dependencies": {
-    "@biolibs/bionet-client": "^0.2.0",
-    "@biolibs/bionet-panels": "^0.3.0",
+    "@biolibs/bionet-client": "^0.2.1",
+    "@biolibs/bionet-panels": "^0.3.1",
     "@biolibs/bionet-react": "^0.2.0",
-    "@biolibs/bionet-scene": "^0.3.0",
+    "@biolibs/bionet-scene": "^0.3.1",
     "@biolibs/bionet-theme": "^0.1.0",
     "@biolibs/bionet-tools": "^0.1.0",
     "@react-three/drei": "^10.7.9",
