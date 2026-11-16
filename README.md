@@ -10,7 +10,7 @@ A lab's freezer, kept by the people in the lab. It works with no network, and sy
 
 ## What you do with it
 
-The window has seven tabs.
+The window has eight tabs.
 
 - **Freezer.** Parts, known by the checksum of their sequence, and the tubes of each. Use some, add
   some, count what is there, say which box and position a tube is in. A tube a run made says which
@@ -24,7 +24,12 @@ The window has seven tabs.
 - **Lab.** The lab drawn in three dimensions, from the whole room down to one position in a box.
   Arrange it by hand: drag, turn, resize, add and retire places. Press an instrument to use it.
 - **Tools.** PCR and a check digest with its gel, run from the tubes the lab holds. Recording a run
-  takes what was used from each tube, and a PCR's product becomes a new tube.
+  takes what was used from each tube, and a PCR's product becomes a new tube. PCR is shown at the
+  thermocycler: the machine, its block and its screen, and then what the machine does not show —
+  the strands parting, the primers landing and the copies being made, with your real bases at the
+  primer's site. A whole programme can be run, and motion can be turned off.
+- **Glossary.** Sixty terms, each with a picture, and whether a biologist has reviewed it. The tools
+  explain their own terms when one is hovered.
 
 ## What it is
 
@@ -106,7 +111,8 @@ the way, and `["wait", ms]` pauses.
 Everything a member can do is in [`@biolibs/bionet-client`](https://www.npmjs.com/package/@biolibs/bionet-client).
 The tabs are in [`@biolibs/bionet-panels`](https://www.npmjs.com/package/@biolibs/bionet-panels),
 the three-dimensional lab in [`@biolibs/bionet-scene`](https://www.npmjs.com/package/@biolibs/bionet-scene),
-and the bench tools in [`@biolibs/bionet-tools`](https://www.npmjs.com/package/@biolibs/bionet-tools).
+the bench tools in [`@biolibs/bionet-tools`](https://www.npmjs.com/package/@biolibs/bionet-tools),
+and the glossary in [`@biolibs/glossary-react`](https://www.npmjs.com/package/@biolibs/glossary-react).
 Every colour, and the mark, is in [`@biolibs/bionet-theme`](https://www.npmjs.com/package/@biolibs/bionet-theme).
 This repository holds only what the desktop can do that nothing else can:
 
@@ -116,7 +122,7 @@ src/main/main.mjs      the device's key sealed by the keychain, the window, the 
 src/main/preload.cjs   the door between the window and the lab: state, one of a fixed list of actions,
                        copy, save
 src/renderer/main.tsx  makes that door look like any other lab, hands it to the panels, and adds the
-                       Lab and Tools tabs to their window
+                       Lab, Tools and Glossary tabs to their window
 ```
 
 A web page that wanted the same application would differ only in those three files.

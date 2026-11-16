@@ -8,8 +8,8 @@ import { createRoot } from "react-dom/client";
 import type { Action, Answer, LabSnapshot, LabSource } from "@biolibs/bionet-client";
 import { LabWindow } from "@biolibs/bionet-panels";
 import { LabProvider, useAct, useLab } from "@biolibs/bionet-react";
-import { LabView } from "@biolibs/bionet-scene";
-import { InstrumentTool, Tools } from "@biolibs/bionet-tools";
+import { InstrumentStage, LabView } from "@biolibs/bionet-scene";
+import { InstrumentTool, Tools, instrumentFor, toolFor, usePcrBench } from "@biolibs/bionet-tools";
 import { ReviewSheet } from "@biolibs/glossary-react";
 import "@biolibs/bionet-theme/theme.css";
 import "@biolibs/bionet-panels/panels.css";
@@ -49,6 +49,17 @@ function bridge(): LabSource {
 }
 
 /**
+ * A PCR at its machine: the thermocycler in a space of its own, with what the tool says beside it.
+ * The scene is from one package and the PCR from another; this only puts them together.
+ */
+function PcrAtMachine({ place, onDone }: { place: string | null; onDone?: () => void }) {
+  const lab = useLab()?.lab;
+  const found = lab?.places.find((one) => one.place === place);
+  const bench = usePcrBench({ instrument: found === undefined ? null : { id: found.place, name: found.name }, ...(onDone === undefined ? {} : { onDone }) });
+  return <div className="scene"><InstrumentStage {...bench.stage}>{bench.panel}</InstrumentStage></div>;
+}
+
+/**
  * The lab drawn in three dimensions, from the same record the other tabs show. It is arranged by
  * hand there, and pressing an instrument opens the tool for it in the scene's place.
  */
@@ -57,7 +68,11 @@ function Scene() {
   const act = useAct();
   const [using, setUsing] = useState<string | null>(null);
   if (lab === null || lab === undefined) return null;
-  if (using !== null) return <InstrumentTool place={using} onDone={() => setUsing(null)} />;
+  if (using !== null) {
+    return toolFor(lab.places.find((one) => one.place === using)) === "pcr"
+      ? <PcrAtMachine place={using} onDone={() => setUsing(null)} />
+      : <InstrumentTool place={using} onDone={() => setUsing(null)} />;
+  }
   return (
     <div className="scene">
       <LabView lab={lab} name={lab.name ?? "Lab"}
@@ -69,10 +84,17 @@ function Scene() {
   );
 }
 
+/** Every tool. PCR is shown at a thermocycler: the lab's own if it has placed one, and one that stands alone if not. */
+function Bench() {
+  const lab = useLab()?.lab;
+  if (lab === null || lab === undefined) return null;
+  return <Tools views={{ pcr: <PcrAtMachine place={instrumentFor(lab, "pcr")?.id ?? null} /> }} />;
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <LabProvider source={bridge()}>
-      <LabWindow tab={location.hash.slice(1) || "freezer"} copy={window.bionet.copy} save={window.bionet.save} extra={[{ id: "scene", label: "Lab", view: <Scene /> }, { id: "tools", label: "Tools", view: <Tools /> },
+      <LabWindow tab={location.hash.slice(1) || "freezer"} copy={window.bionet.copy} save={window.bionet.save} extra={[{ id: "scene", label: "Lab", view: <Scene /> }, { id: "tools", label: "Tools", view: <Bench /> },
                          { id: "glossary", label: "Glossary", view: <section className="card"><ReviewSheet /></section> }]} />
     </LabProvider>
   </StrictMode>,
