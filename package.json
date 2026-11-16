@@ -10,12 +10,13 @@
     "start": "electron .",
     "dev": "vite build && electron .",
     "typecheck": "tsc --noEmit",
-    "try-core": "node scripts/try-core.mjs",
     "try-app": "vite build && node scripts/try-app.mjs"
   },
   "dependencies": {
-    "@biolibs/bionet": "^1.2.0",
-    "@biolibs/opencloning": "^2.0.0"
+    "@biolibs/bionet-client": "^0.1.0",
+    "@biolibs/bionet-panels": "^0.1.0",
+    "@biolibs/bionet-react": "^0.1.0",
+    "@biolibs/bionet-theme": "^0.1.0"
   },
   "devDependencies": {
     "@types/node": "^22",

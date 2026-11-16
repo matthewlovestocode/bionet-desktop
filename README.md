@@ -46,23 +46,27 @@ npm start -- --profile=bob
 
 ## Trying it without a person
 
-Both of these start the real web peer from `../lab-wren` (run `npm run build` there first).
+```
+npm run try-app
+```
 
-| Command | What it does |
-|---|---|
-| `npm run try-core` | Two devices with no windows: founding, joining, live changes, offline work that converges, refusals, publishing, quitting and reopening |
-| `npm run try-app` | The real app as two devices, driven through the same door the window uses, photographing each step |
+runs the real app as two devices, driven through the same door the window uses, against the real web
+peer from `../lab-wren` (run `npm run build` there first), photographing each step.
 
-## Layout
+## It owns nothing
+
+Everything a member can do is in [`@biolibs/bionet-client`](https://www.npmjs.com/package/@biolibs/bionet-client).
+Everything drawn is in [`@biolibs/bionet-panels`](https://www.npmjs.com/package/@biolibs/bionet-panels).
+Every colour, and the mark, is in [`@biolibs/bionet-theme`](https://www.npmjs.com/package/@biolibs/bionet-theme).
+This repository holds only what the desktop can do that nothing else can:
 
 ```
-src/core/      the app without a window: plain Node, no Electron
-  lab.mjs        one device in one lab, and everything it can do
-  peer-link.mjs  the connection to the web peer; allowed to fail
-  store.mjs      the SQLite file: entries and a few settings
-src/main/      the window around it: keychain, IPC, nothing else
-src/renderer/  what is drawn: React, given the lab as plain data
+src/main/main.mjs      the device's key sealed by the keychain, the window, the entries in a SQLite file
+src/main/preload.cjs   the door between the window and the lab: state, one of a fixed list of actions, copy
+src/renderer/main.tsx  makes that door look like any other lab, and hands it to the panels
 ```
+
+A web page that wanted the same application would differ only in those three files.
 
 ## Not yet
 

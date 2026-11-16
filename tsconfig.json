@@ -11,7 +11,8 @@
     "checkJs": false,
     "skipLibCheck": true,
     "isolatedModules": true,
-    "noUncheckedIndexedAccess": true
+    "noUncheckedIndexedAccess": true,
+    "types": ["vite/client"]
   },
   "include": ["src/renderer"]
 }

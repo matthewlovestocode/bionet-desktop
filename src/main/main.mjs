@@ -2,8 +2,9 @@
 /**
  * The window around the lab.
  *
- * Everything a member does happens in `../core/lab.mjs`, which knows nothing of Electron. This file
- * adds the three things only the desktop can: the device's key kept sealed by the operating system's
+ * Everything a member does happens in `@biolibs/bionet-client`, which knows nothing of Electron, and
+ * everything drawn comes from `@biolibs/bionet-panels`. This file adds the three things only the
+ * desktop can: the device's key kept sealed by the operating system's
  * keychain, a window, and the narrow door between that window and the lab.
  *
  * The window is given no powers. It cannot read files, reach the network or see the key; it can ask
@@ -13,7 +14,9 @@ import { BrowserWindow, app, clipboard, dialog, ipcMain, nativeTheme, safeStorag
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Lab } from "../core/lab.mjs";
+import { Lab, perform } from "@biolibs/bionet-client";
+import { sqliteStore } from "@biolibs/bionet-client/sqlite";
+import { COLOURS } from "@biolibs/bionet-theme";
 
 const here = fileURLToPath(new URL(".", import.meta.url));
 const flag = (/** @type {string} */ name) => process.argv.find((one) => one.startsWith(`--${name}=`))?.slice(name.length + 3) ?? null;
@@ -40,10 +43,6 @@ const keys = {
   },
 };
 
-/** What the window may ask for. Anything else is refused. */
-const DOORS = /** @type {const} */ (["setPerson", "found", "join", "setPeer", "setOrigin", "addMember", "addPart", "addItem",
-                                     "adjust", "recount", "retire", "offer", "setField", "publish"]);
-
 app.whenReady().then(async () => {
   if (!(await safeStorage.isAsyncEncryptionAvailable())) {
     dialog.showErrorBox("No keychain", "This device has nowhere safe to keep its key, so the app will not make one.");
@@ -51,31 +50,25 @@ app.whenReady().then(async () => {
     return;
   }
   if (app.dock) app.dock.setIcon(icon);
-  const lab = await new Lab({ dir: app.getPath("userData"), keys }).open();
+  const lab = await new Lab({ store: sqliteStore(app.getPath("userData")), keys }).open();
 
+  // The door between the window and the lab. `perform` does only what is on the client's own list.
   /** @param {string} action @param {unknown} payload */
-  const act = async (action, payload) => {
-    if (!DOORS.includes(/** @type {any} */ (action))) return { ok: false, error: "That is not something this app does." };
-    try {
-      return { ok: true, result: await /** @type {any} */ (lab)[action](payload) };
-    } catch (cause) {
-      return { ok: false, error: cause instanceof Error ? cause.message : String(cause) };
-    }
-  };
+  const act = (action, payload) => perform(lab, action, payload);
   ipcMain.handle("bionet:state", () => lab.snapshot());
   ipcMain.handle("bionet:do", (_event, action, payload) => act(String(action), payload));
   ipcMain.handle("bionet:copy", (_event, words) => clipboard.writeText(String(words).slice(0, 5_000)));
 
   const window = new BrowserWindow({
     width: 1100, height: 780, minWidth: 720, minHeight: 520, title: "Bionet",
-    backgroundColor: nativeTheme.shouldUseDarkColors ? "#05070d" : "#f6f7f9",
+    backgroundColor: COLOURS[nativeTheme.shouldUseDarkColors ? "dark" : "light"].ground,
     icon,
     webPreferences: { preload: join(here, "preload.cjs"), contextIsolation: true, sandbox: true, nodeIntegration: false },
   });
   // This window shows the lab and nothing else: it does not follow links or open other windows.
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   window.webContents.on("will-navigate", (event) => event.preventDefault());
-  lab.on("change", () => { if (!window.isDestroyed()) window.webContents.send("bionet:state", lab.snapshot()); });
+  lab.subscribe(() => { if (!window.isDestroyed()) window.webContents.send("bionet:state", lab.snapshot()); });
   await window.loadFile(join(here, "../../dist/renderer/index.html"), { hash: flag("tab") ?? "" });
 
   // For trying the app out without a person at it: do a list of things, then take a picture and quit.
@@ -84,8 +77,8 @@ app.whenReady().then(async () => {
     for (const [action, written] of JSON.parse(readFileSync(script, "utf8"))) {
       // A script cannot know a checksum or an item's ID in advance, so it may name them by position.
       const payload = JSON.parse(JSON.stringify(written ?? null)
-        .replace(/\{\{part(\d+)\}\}/g, (_all, at) => lab.state?.parts[Number(at)]?.checksum ?? "")
-        .replace(/\{\{item(\d+)\}\}/g, (_all, at) => lab.state?.items[Number(at)]?.item ?? ""));
+        .replace(/\{\{part(\d+)\}\}/g, (_all, at) => lab.snapshot().lab?.parts[Number(at)]?.checksum ?? "")
+        .replace(/\{\{item(\d+)\}\}/g, (_all, at) => lab.snapshot().lab?.items[Number(at)]?.item ?? ""));
       const answer = await act(action, payload);
       console.log(`${action}: ${answer.ok ? "ok" : answer.error}`);
     }
@@ -94,9 +87,10 @@ app.whenReady().then(async () => {
   if (picture !== null) {
     await new Promise((done) => setTimeout(done, Number(flag("wait") ?? 2500)));
     writeFileSync(picture, (await window.webContents.capturePage()).toPNG());
-    console.log(`state: ${JSON.stringify({ key: lab.key.publicKey, labId: lab.labId, invite: lab.invite,
-                                           person: lab.person, lab: lab.state?.name ?? null, member: lab.snapshot().lab?.member ?? false,
-                                           items: lab.state?.items.map((one) => one.amount) ?? [], peer: lab.snapshot().peer.status })}`);
+    const seen = lab.snapshot();
+    console.log(`state: ${JSON.stringify({ key: seen.device.key, labId: seen.lab?.id ?? null, invite: seen.peer.invite, person: seen.device.person,
+                                           lab: seen.lab?.name ?? null, member: seen.lab?.member ?? false,
+                                           items: seen.lab?.items.map((one) => one.amount) ?? [], peer: seen.peer.status })}`);
     lab.close();
     app.exit(0);
   }
