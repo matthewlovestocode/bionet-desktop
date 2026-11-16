@@ -3,14 +3,14 @@
  * comes from `@biolibs/bionet-panels`, and the colours come from `@biolibs/bionet-theme`. All this
  * file does is join them, by making the bridge to the main process look like any other lab.
  */
-import { StrictMode, useState } from "react";
+import { StrictMode, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { Action, Answer, LabSnapshot, LabSource } from "@biolibs/bionet-client";
 import { LabWindow } from "@biolibs/bionet-panels";
 import { LabProvider, useAct, useLab } from "@biolibs/bionet-react";
 import { InstrumentStage, LabView, type NewPlace, type Standing } from "@biolibs/bionet-scene";
 import { Demo } from "@biolibs/bionet-demo";
-import { InstrumentTool, Tools, instrumentFor, moleculeOf, toolFor, useDigestBench, useLigationBench, usePcrBench } from "@biolibs/bionet-tools";
+import { InstrumentTool, SequencesTool, Tools, instrumentFor, moleculeOf, toolFor, useDigestBench, useLigationBench, usePcrBench, usePrimerBench } from "@biolibs/bionet-tools";
 import { ReviewSheet } from "@biolibs/glossary-react";
 import "@biolibs/bionet-theme/theme.css";
 import "@biolibs/bionet-panels/panels.css";
@@ -51,33 +51,6 @@ function bridge(): LabSource {
 }
 
 /**
- * A PCR at its machine: the thermocycler in a space of its own, with what the tool says beside it.
- * The scene is from one package and the PCR from another; this only puts them together.
- */
-function PcrAtMachine({ place, onDone }: { place: string | null; onDone?: () => void }) {
-  const lab = useLab()?.lab;
-  const found = lab?.places.find((one) => one.place === place);
-  const bench = usePcrBench({ instrument: found === undefined ? null : { id: found.place, name: found.name }, ...(onDone === undefined ? {} : { onDone }) });
-  return <div className="scene"><InstrumentStage {...bench.stage}>{bench.panel}</InstrumentStage></div>;
-}
-
-/** A digest at its gel station, put together the same way. */
-function DigestAtStation({ place, onDone }: { place: string | null; onDone?: () => void }) {
-  const lab = useLab()?.lab;
-  const found = lab?.places.find((one) => one.place === place);
-  const bench = useDigestBench({ instrument: found === undefined ? null : { id: found.place, name: found.name }, ...(onDone === undefined ? {} : { onDone }) });
-  return <div className="scene"><InstrumentStage {...bench.stage}>{bench.panel}</InstrumentStage></div>;
-}
-
-/** A ligation at its heat block, put together the same way. */
-function LigationAtBlock({ place, onDone }: { place: string | null; onDone?: () => void }) {
-  const lab = useLab()?.lab;
-  const found = lab?.places.find((one) => one.place === place);
-  const bench = useLigationBench({ instrument: found === undefined ? null : { id: found.place, name: found.name }, ...(onDone === undefined ? {} : { onDone }) });
-  return <div className="scene"><InstrumentStage {...bench.stage}>{bench.panel}</InstrumentStage></div>;
-}
-
-/**
  * The lab drawn in three dimensions, from the same record the other tabs show. It is arranged by
  * hand there, and pressing an instrument works it where it stands.
  *
@@ -115,12 +88,56 @@ function Scene() {
   );
 }
 
-/** Every tool. Each is shown at its instrument: the lab's own if it has placed one, and one that stands alone if not. */
-function Bench() {
+/** The tubes a PCR is run from. */
+type PcrTubes = { template: string; forward: string; reverse: string };
+
+/**
+ * One tool, shown in the lab: the room, with the view gone to the machine the tool is used at and
+ * the tool beside it. Every tool is this same thing, so choosing another one moves the camera from
+ * one machine to the next instead of putting a new picture up. A tool whose machine the lab has not
+ * placed has nowhere in the room to go, and only then is its machine shown standing alone.
+ */
+function ToolInLab({ tool, onPcr, pcrOn }: {
+  tool: "sequences" | "primers" | "pcr" | "digest" | "ligation";
+  /** Told the tubes when primers have been designed and somebody goes on to the PCR. */
+  onPcr?: (tubes: PcrTubes) => void;
+  /** The tubes to open the PCR on, when it was come to from a design. */
+  pcrOn?: PcrTubes | null;
+}) {
   const lab = useLab()?.lab;
+  const found = lab === null || lab === undefined || tool === "sequences" || tool === "primers" ? null : instrumentFor(lab, tool);
+  // Kept the same from one draw to the next, so that a tool is not set working again by being looked at.
+  const stood = useMemo(() => (found === null ? null : { id: found.id, name: found.name }), [found?.id, found?.name]);
+  const pcr = usePcrBench({ instrument: tool === "pcr" ? stood : null, ...(pcrOn === null || pcrOn === undefined ? {} : { start: pcrOn }) });
+  // Primers are designed at a desk, so there is no machine to walk to: the room stays, looking at
+  // the template's tube, with the pair drawn on the molecule over it.
+  const primers = usePrimerBench(onPcr === undefined ? {} : { onPcr });
+  const digest = useDigestBench({ instrument: tool === "digest" ? stood : null });
+  const ligation = useLigationBench({ instrument: tool === "ligation" ? stood : null });
   if (lab === null || lab === undefined) return null;
-  return <Tools views={{ pcr: <PcrAtMachine place={instrumentFor(lab, "pcr")?.id ?? null} />, digest: <DigestAtStation place={instrumentFor(lab, "digest")?.id ?? null} />,
-                        ligation: <LigationAtBlock place={instrumentFor(lab, "ligation")?.id ?? null} /> }} />;
+  const bench = tool === "pcr" ? pcr : tool === "digest" ? digest : tool === "ligation" ? ligation : null;
+  const drawn = lab.places.some((one) => !one.retired);
+  if (bench !== null && stood === null) return <div className="scene"><InstrumentStage {...bench.stage}>{bench.panel}</InstrumentStage></div>;
+  if (bench === null && !drawn) return tool === "primers" ? <>{primers.panel}</> : <SequencesTool />;
+  const desk = tool === "primers" ? primers.desk : null;
+  return (
+    <div className="scene">
+      <LabView lab={lab} name={lab.name ?? "Lab"}
+               {...(bench !== null && stood !== null ? { focus: { place: stood.id }, using: { place: stood.id, ...bench.stage, panel: bench.panel } }
+                 : desk !== null ? { focus: desk.focus ?? { place: null }, wide: true, beside: primers.panel }
+                 : { focus: { place: null }, wide: true, beside: <div className="bionet"><SequencesTool /></div> })}
+               molecule={(item) => { if (desk !== null && desk.focus?.item === item && desk.molecule !== null) return desk.molecule; const part = lab.parts.find((one) => one.checksum === lab.items.find((each) => each.item === item)?.part); return part === undefined ? null : moleculeOf(part); }} />
+    </div>
+  );
+}
+
+/** Every tool, each in the lab at the machine it is used at. */
+function Bench() {
+  // A pair that has been designed and has arrived leads straight on to its PCR, opened on those tubes.
+  const [pcrOn, setPcrOn] = useState<PcrTubes | null>(null);
+  return <Tools views={{ sequences: <ToolInLab tool="sequences" />,
+                         primers: (go) => <ToolInLab tool="primers" onPcr={(tubes) => { setPcrOn(tubes); go("pcr"); }} />,
+                         pcr: <ToolInLab tool="pcr" pcrOn={pcrOn} />, digest: <ToolInLab tool="digest" />, ligation: <ToolInLab tool="ligation" /> }} />;
 }
 
 createRoot(document.getElementById("root")!).render(
