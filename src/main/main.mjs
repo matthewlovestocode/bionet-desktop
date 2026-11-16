@@ -11,8 +11,8 @@
  * for the lab's state and ask for one of a fixed list of things to be done, and that is all.
  */
 import { BrowserWindow, app, clipboard, dialog, ipcMain, nativeTheme, safeStorage } from "electron";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Lab, perform } from "@biolibs/bionet-client";
 import { sqliteStore } from "@biolibs/bionet-client/sqlite";
@@ -50,6 +50,29 @@ const keys = {
   },
 };
 
+/**
+ * Put a lab built elsewhere into this profile, key and all.
+ *
+ * A device's key is sealed by the keychain of the machine it is on, so a lab that travels carries
+ * its key unsealed and has to be let in by the app itself: sealing it anywhere else seals it under
+ * another name, and this app would not be able to open it. It is refused onto a profile that
+ * already holds a lab, since that lab is somebody's.
+ *
+ * @param from - The folder holding `lab.db` and the unsealed `device.key` that founded it.
+ * @param into - The profile folder to put them in.
+ */
+async function loadLab(from, into) {
+  for (const needed of ["lab.db", "device.key"]) {
+    if (!existsSync(join(from, needed))) throw new Error(`There is no ${needed} in ${from}.`);
+  }
+  if (existsSync(join(into, "lab.db"))) throw new Error(`${into} already holds a lab. Use another --profile.`);
+  mkdirSync(into, { recursive: true });
+  writeFileSync(join(into, "device.key"), await safeStorage.encryptStringAsync(readFileSync(join(from, "device.key"), "utf8").trim()), { mode: 0o600 });
+  for (const one of ["lab.db", "lab.db-wal", "lab.db-shm"]) {
+    if (existsSync(join(from, one))) copyFileSync(join(from, one), join(into, one));
+  }
+}
+
 app.whenReady().then(async () => {
   if (!(await safeStorage.isAsyncEncryptionAvailable())) {
     dialog.showErrorBox("No keychain", "This device has nowhere safe to keep its key, so the app will not make one.");
@@ -57,6 +80,17 @@ app.whenReady().then(async () => {
     return;
   }
   if (app.dock) app.dock.setIcon(icon);
+  const bringing = flag("load-lab");
+  if (bringing !== null) {
+    try {
+      await loadLab(resolve(bringing), app.getPath("userData"));
+      console.log(`loaded the lab from ${resolve(bringing)}`);
+    } catch (cause) {
+      dialog.showErrorBox("That lab could not be loaded", cause instanceof Error ? cause.message : String(cause));
+      app.exit(1);
+      return;
+    }
+  }
   const lab = await new Lab({ store: sqliteStore(app.getPath("userData")), keys }).open();
 
   // The door between the window and the lab. `perform` does only what is on the client's own list.
