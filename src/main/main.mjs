@@ -9,7 +9,7 @@
  * The window is given no powers. It cannot read files, reach the network or see the key; it can ask
  * for the lab's state and ask for one of a fixed list of things to be done, and that is all.
  */
-import { BrowserWindow, app, clipboard, dialog, ipcMain, safeStorage } from "electron";
+import { BrowserWindow, app, clipboard, dialog, ipcMain, nativeTheme, safeStorage } from "electron";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,6 +22,11 @@ const flag = (/** @type {string} */ name) => process.argv.find((one) => one.star
 // how two members are tried out side by side, and nothing a lab needs day to day.
 const profile = flag("profile");
 if (profile !== null) app.setPath("userData", join(app.getPath("appData"), "bionet-desktop", "profiles", profile.replace(/[^A-Za-z0-9_-]/g, "")));
+
+// The app follows the system's light or dark theme. This is for looking at the other one.
+const theme = flag("theme");
+if (theme === "light" || theme === "dark") nativeTheme.themeSource = theme;
+const icon = join(here, "../../assets/icon.png");
 
 /** The device's key, sealed by the keychain. It is never written anywhere unsealed. */
 const keys = {
@@ -45,6 +50,7 @@ app.whenReady().then(async () => {
     app.exit(1);
     return;
   }
+  if (app.dock) app.dock.setIcon(icon);
   const lab = await new Lab({ dir: app.getPath("userData"), keys }).open();
 
   /** @param {string} action @param {unknown} payload */
@@ -62,7 +68,8 @@ app.whenReady().then(async () => {
 
   const window = new BrowserWindow({
     width: 1100, height: 780, minWidth: 720, minHeight: 520, title: "Bionet",
-    backgroundColor: "#161615",
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#05070d" : "#f6f7f9",
+    icon,
     webPreferences: { preload: join(here, "preload.cjs"), contextIsolation: true, sandbox: true, nodeIntegration: false },
   });
   // This window shows the lab and nothing else: it does not follow links or open other windows.

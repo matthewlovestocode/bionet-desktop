@@ -8,6 +8,33 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { History, Inventory, People, Sharing } from "./views";
 import type { PeerView, Snapshot } from "./types";
+import logoOnDark from "./assets/bionet-logo-on-dark.svg";
+import logoOnLight from "./assets/bionet-logo-on-light.svg";
+
+/**
+ * The Bionet mark: a lower-case b whose bowl is a plasmid in three arcs. Two are yours and one is
+ * theirs, drawn in whatever those colours are in the current theme.
+ */
+export function Mark({ size = 28 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 713 881" height={size} role="img" aria-label="Bionet" className="mark">
+      <g transform="translate(-3.5 0)" fill="none" strokeLinecap="round" strokeWidth={53}>
+        <path stroke="var(--yours)" d="M109.5 106L109.5 763M349.93 774.8A250.5 250.5 0 1 1 436.14 285.85M515.27 327.92A250.5 250.5 0 0 1 610.3 514.43" />
+        <path stroke="var(--theirs)" d="M597.83 603.17A250.5 250.5 0 0 1 438.67 762.33" />
+      </g>
+    </svg>
+  );
+}
+
+/** The mark as the b of the word, in the version for the current theme. */
+function Logo() {
+  return (
+    <picture className="logo">
+      <source srcSet={logoOnDark} media="(prefers-color-scheme: dark)" />
+      <img src={logoOnLight} alt="Bionet" height={44} />
+    </picture>
+  );
+}
 
 /** Ask for one thing, and report how it went. */
 export type Act = (action: string, payload?: unknown) => Promise<boolean>;
@@ -37,17 +64,20 @@ export function App() {
     <p role="alert" className="trouble">{trouble}<button type="button" className="plain" onClick={() => setTrouble(null)}>dismiss</button></p>
   );
 
-  if (state.device.person === null) return <main className="centre">{problem}<Who act={act} /></main>;
-  if (state.lab === null) return <main className="centre">{problem}<NoLab state={state} act={act} /></main>;
-  if (!state.lab.member) return <main className="centre">{problem}<Waiting state={state} /></main>;
+  if (state.device.person === null) return <main className="centre"><Logo />{problem}<Who act={act} /></main>;
+  if (state.lab === null) return <main className="centre"><Logo />{problem}<NoLab state={state} act={act} /></main>;
+  if (!state.lab.member) return <main className="centre"><Logo />{problem}<Waiting state={state} /></main>;
 
   const lab = state.lab;
   return (
     <div className="shell">
       <header>
-        <div>
+        <div className="title">
+          <Mark size={34} />
+          <div>
           <h1>{lab.name ?? "A lab"}</h1>
           <p className="dim small">{state.device.person} · {lab.keeper ? "keeper" : "member"} · this device <code>{state.device.fingerprint}</code></p>
+          </div>
         </div>
         <Sync peer={state.peer} />
       </header>
