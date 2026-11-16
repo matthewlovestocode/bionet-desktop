@@ -9,7 +9,7 @@ import type { Action, Answer, LabSnapshot, LabSource } from "@biolibs/bionet-cli
 import { LabWindow } from "@biolibs/bionet-panels";
 import { LabProvider, useAct, useLab } from "@biolibs/bionet-react";
 import { LabView } from "@biolibs/bionet-scene";
-import { InstrumentTool } from "@biolibs/bionet-tools";
+import { InstrumentTool, Tools } from "@biolibs/bionet-tools";
 import "@biolibs/bionet-theme/theme.css";
 import "@biolibs/bionet-panels/panels.css";
 import "@biolibs/bionet-scene/scene.css";
@@ -69,7 +69,7 @@ function Scene() {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <LabProvider source={bridge()}>
-      <LabWindow tab={location.hash.slice(1) || "freezer"} copy={window.bionet.copy} extra={[{ id: "scene", label: "Lab", view: <Scene /> }]} />
+      <LabWindow tab={location.hash.slice(1) || "freezer"} copy={window.bionet.copy} extra={[{ id: "scene", label: "Lab", view: <Scene /> }, { id: "tools", label: "Tools", view: <Tools /> }]} />
     </LabProvider>
   </StrictMode>,
 );
