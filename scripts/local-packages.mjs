@@ -23,14 +23,14 @@ const biolibs = resolve(process.env.BIOLIBS ?? join(app, "..", "biolibs"));
 const installed = join(app, "node_modules", "@biolibs");
 
 /**
- * What to link: the Bionet packages, and any other package in the checkout that is not installed
+ * What to link: the Bionet packages and the glossary they explain themselves with, and any other package in the checkout that is not installed
  * here at all. A linked package finds what it imports in this app, so an engine it has newly come
  * to need, and that npm has not been asked for yet, has to be linked as well.
  */
 const inside = (/** @type {string} */ dir) => (existsSync(dir) ? readdirSync(dir).filter((name) => existsSync(join(dir, name, "package.json")) || lstatSync(join(dir, name)).isSymbolicLink()) : []);
 const here = inside(installed);
 const checkout = inside(join(biolibs, "packages"));
-const names = [...new Set([...here, ...checkout].filter((name) => name.startsWith("bionet") || !here.includes(name) || lstatSync(join(installed, name)).isSymbolicLink()))].sort();
+const names = [...new Set([...here, ...checkout].filter((name) => name.startsWith("bionet") || name.startsWith("glossary") || !here.includes(name) || lstatSync(join(installed, name)).isSymbolicLink()))].sort();
 const linked = (/** @type {string} */ name) => existsSync(join(installed, name)) && lstatSync(join(installed, name)).isSymbolicLink();
 const version = (/** @type {string} */ dir) => JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).version;
 

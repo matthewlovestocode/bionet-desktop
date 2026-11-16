@@ -21,6 +21,13 @@ import { COLOURS } from "@biolibs/bionet-theme";
 const here = fileURLToPath(new URL(".", import.meta.url));
 const flag = (/** @type {string} */ name) => process.argv.find((one) => one.startsWith(`--${name}=`))?.slice(name.length + 3) ?? null;
 
+// A window run from a script is often behind another one, and a window that cannot be seen stops
+// drawing. Its pictures would then be of an earlier moment, so a scripted window keeps drawing.
+if (flag("script") !== null) {
+  app.commandLine.appendSwitch("disable-backgrounding-occluded-windows");
+  app.commandLine.appendSwitch("disable-renderer-backgrounding");
+}
+
 // A profile is a separate device on the same machine: its own key, its own copy of the lab. It is
 // how two members are tried out side by side, and nothing a lab needs day to day.
 const profile = flag("profile");
@@ -93,8 +100,11 @@ app.whenReady().then(async () => {
       // A script may also work the window as a person would, so that what is tried is what is used:
       // press a point, run a line in the page (to choose from a list, or press a button by its
       // words), or take a picture on the way.
-      if (action === "click") {
-        const [x, y] = written;
+      // A point may be given as a line to run in the page that answers with one, for something whose
+      // place is not known until it is drawn. `move` only moves the pointer there, to try what hovering does.
+      if (action === "click" || action === "move") {
+        const [x, y] = typeof written === "string" ? await window.webContents.executeJavaScript(written, true) : written;
+        if (action === "move") { window.webContents.sendInputEvent({ type: "mouseMove", x, y }); continue; }
         for (const type of /** @type {const} */ (["mouseDown", "mouseUp"])) window.webContents.sendInputEvent({ type, x, y, button: "left", clickCount: 1 });
         continue;
       }

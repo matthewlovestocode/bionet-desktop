@@ -9,7 +9,7 @@ import type { Action, Answer, LabSnapshot, LabSource } from "@biolibs/bionet-cli
 import { LabWindow } from "@biolibs/bionet-panels";
 import { LabProvider, useAct, useLab } from "@biolibs/bionet-react";
 import { InstrumentStage, LabView } from "@biolibs/bionet-scene";
-import { InstrumentTool, Tools, instrumentFor, toolFor, usePcrBench } from "@biolibs/bionet-tools";
+import { InstrumentTool, Tools, instrumentFor, moleculeOf, toolFor, useDigestBench, usePcrBench } from "@biolibs/bionet-tools";
 import { ReviewSheet } from "@biolibs/glossary-react";
 import "@biolibs/bionet-theme/theme.css";
 import "@biolibs/bionet-panels/panels.css";
@@ -59,6 +59,14 @@ function PcrAtMachine({ place, onDone }: { place: string | null; onDone?: () => 
   return <div className="scene"><InstrumentStage {...bench.stage}>{bench.panel}</InstrumentStage></div>;
 }
 
+/** A digest at its gel station, put together the same way. */
+function DigestAtStation({ place, onDone }: { place: string | null; onDone?: () => void }) {
+  const lab = useLab()?.lab;
+  const found = lab?.places.find((one) => one.place === place);
+  const bench = useDigestBench({ instrument: found === undefined ? null : { id: found.place, name: found.name }, ...(onDone === undefined ? {} : { onDone }) });
+  return <div className="scene"><InstrumentStage {...bench.stage}>{bench.panel}</InstrumentStage></div>;
+}
+
 /**
  * The lab drawn in three dimensions, from the same record the other tabs show. It is arranged by
  * hand there, and pressing an instrument opens the tool for it in the scene's place.
@@ -69,8 +77,9 @@ function Scene() {
   const [using, setUsing] = useState<string | null>(null);
   if (lab === null || lab === undefined) return null;
   if (using !== null) {
-    return toolFor(lab.places.find((one) => one.place === using)) === "pcr"
-      ? <PcrAtMachine place={using} onDone={() => setUsing(null)} />
+    const tool = toolFor(lab.places.find((one) => one.place === using));
+    return tool === "pcr" ? <PcrAtMachine place={using} onDone={() => setUsing(null)} />
+      : tool === "digest" ? <DigestAtStation place={using} onDone={() => setUsing(null)} />
       : <InstrumentTool place={using} onDone={() => setUsing(null)} />;
   }
   return (
@@ -79,16 +88,17 @@ function Scene() {
                onStand={(place, standing) => act("standPlace", { place, standing })}
                onAdd={(place) => act("addPlace", place)}
                onRetire={(place) => act("retirePlace", { place })}
-               onUse={setUsing} />
+               onUse={setUsing}
+               molecule={(item) => { const part = lab.parts.find((one) => one.checksum === lab.items.find((each) => each.item === item)?.part); return part === undefined ? null : moleculeOf(part); }} />
     </div>
   );
 }
 
-/** Every tool. PCR is shown at a thermocycler: the lab's own if it has placed one, and one that stands alone if not. */
+/** Every tool. Each is shown at its instrument: the lab's own if it has placed one, and one that stands alone if not. */
 function Bench() {
   const lab = useLab()?.lab;
   if (lab === null || lab === undefined) return null;
-  return <Tools views={{ pcr: <PcrAtMachine place={instrumentFor(lab, "pcr")?.id ?? null} /> }} />;
+  return <Tools views={{ pcr: <PcrAtMachine place={instrumentFor(lab, "pcr")?.id ?? null} />, digest: <DigestAtStation place={instrumentFor(lab, "digest")?.id ?? null} /> }} />;
 }
 
 createRoot(document.getElementById("root")!).render(

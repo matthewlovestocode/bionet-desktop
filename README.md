@@ -22,8 +22,13 @@ The window has eight tabs.
 - **History.** Every signed change, in words, and what became of it.
 - **Sharing.** What other labs are shown, and the lab's web peer.
 - **Lab.** The lab drawn in three dimensions, from the whole room down to one position in a box.
-  Arrange it by hand: drag, turn, resize, add and retire places. Press an instrument to use it.
-- **Tools.** PCR and a check digest with its gel, run from the tubes the lab holds. Recording a run
+  Arrange it by hand: drag, turn, resize, add and retire places. Press an instrument to use it, and
+  pick a tube to see the construct in it drawn over it as a map.
+- **Tools.** Sequences, PCR and a check digest with its gel. Sequences brings in SnapGene, GenBank, EMBL
+  and FASTA files as parts, with their features, and shows any part as a map with the enzymes that cut it.
+  PCR and digest are run from the tubes the lab holds, each at its machine: a digest at the gel station shows
+  every cut in its bases, the pieces with their ends, and the gel in the scene, and a piece can be kept as a tube
+  with the ends the enzymes left. Each figure opens to its working, and a PCR's product keeps what its template had marked. Recording a run
   takes what was used from each tube, and a PCR's product becomes a new tube. PCR is shown at the
   thermocycler: the machine, its block and its screen, and then what the machine does not show —
   the strands parting, the primers landing and the copies being made, with your real bases at the
