@@ -28,7 +28,8 @@ The window has eight tabs.
   and FASTA files as parts, with their features, and shows any part as a map with the enzymes that cut it.
   PCR and digest are run from the tubes the lab holds, each at its machine: a digest at the gel station shows
   every cut in its bases, the pieces with their ends, and the gel in the scene, and a piece can be kept as a tube
-  with the ends the enzymes left. Each figure opens to its working, and a PCR's product keeps what its template had marked. Recording a run
+  with the ends the enzymes left. Ligation joins cut pieces back up at a heat block, saying which
+  ends fit, which way round each piece went, and what it would give. Each figure opens to its working, and a PCR's product keeps what its template had marked. Recording a run
   takes what was used from each tube, and a PCR's product becomes a new tube. PCR is shown at the
   thermocycler: the machine, its block and its screen, and then what the machine does not show —
   the strands parting, the primers landing and the copies being made, with your real bases at the

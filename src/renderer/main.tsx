@@ -9,7 +9,7 @@ import type { Action, Answer, LabSnapshot, LabSource } from "@biolibs/bionet-cli
 import { LabWindow } from "@biolibs/bionet-panels";
 import { LabProvider, useAct, useLab } from "@biolibs/bionet-react";
 import { InstrumentStage, LabView } from "@biolibs/bionet-scene";
-import { InstrumentTool, Tools, instrumentFor, moleculeOf, toolFor, useDigestBench, usePcrBench } from "@biolibs/bionet-tools";
+import { InstrumentTool, Tools, instrumentFor, moleculeOf, toolFor, useDigestBench, useLigationBench, usePcrBench } from "@biolibs/bionet-tools";
 import { ReviewSheet } from "@biolibs/glossary-react";
 import "@biolibs/bionet-theme/theme.css";
 import "@biolibs/bionet-panels/panels.css";
@@ -67,6 +67,14 @@ function DigestAtStation({ place, onDone }: { place: string | null; onDone?: () 
   return <div className="scene"><InstrumentStage {...bench.stage}>{bench.panel}</InstrumentStage></div>;
 }
 
+/** A ligation at its heat block, put together the same way. */
+function LigationAtBlock({ place, onDone }: { place: string | null; onDone?: () => void }) {
+  const lab = useLab()?.lab;
+  const found = lab?.places.find((one) => one.place === place);
+  const bench = useLigationBench({ instrument: found === undefined ? null : { id: found.place, name: found.name }, ...(onDone === undefined ? {} : { onDone }) });
+  return <div className="scene"><InstrumentStage {...bench.stage}>{bench.panel}</InstrumentStage></div>;
+}
+
 /**
  * The lab drawn in three dimensions, from the same record the other tabs show. It is arranged by
  * hand there, and pressing an instrument opens the tool for it in the scene's place.
@@ -80,6 +88,7 @@ function Scene() {
     const tool = toolFor(lab.places.find((one) => one.place === using));
     return tool === "pcr" ? <PcrAtMachine place={using} onDone={() => setUsing(null)} />
       : tool === "digest" ? <DigestAtStation place={using} onDone={() => setUsing(null)} />
+      : tool === "ligation" ? <LigationAtBlock place={using} onDone={() => setUsing(null)} />
       : <InstrumentTool place={using} onDone={() => setUsing(null)} />;
   }
   return (
@@ -98,7 +107,8 @@ function Scene() {
 function Bench() {
   const lab = useLab()?.lab;
   if (lab === null || lab === undefined) return null;
-  return <Tools views={{ pcr: <PcrAtMachine place={instrumentFor(lab, "pcr")?.id ?? null} />, digest: <DigestAtStation place={instrumentFor(lab, "digest")?.id ?? null} /> }} />;
+  return <Tools views={{ pcr: <PcrAtMachine place={instrumentFor(lab, "pcr")?.id ?? null} />, digest: <DigestAtStation place={instrumentFor(lab, "digest")?.id ?? null} />,
+                        ligation: <LigationAtBlock place={instrumentFor(lab, "ligation")?.id ?? null} /> }} />;
 }
 
 createRoot(document.getElementById("root")!).render(
