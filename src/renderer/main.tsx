@@ -10,10 +10,12 @@ import { LabWindow } from "@biolibs/bionet-panels";
 import { LabProvider, useAct, useLab } from "@biolibs/bionet-react";
 import { LabView } from "@biolibs/bionet-scene";
 import { InstrumentTool, Tools } from "@biolibs/bionet-tools";
+import { ReviewSheet } from "@biolibs/glossary-react";
 import "@biolibs/bionet-theme/theme.css";
 import "@biolibs/bionet-panels/panels.css";
 import "@biolibs/bionet-scene/scene.css";
 import "@biolibs/bionet-tools/tools.css";
+import "@biolibs/glossary-react/glossary.css";
 import "./page.css";
 
 declare global {
@@ -70,7 +72,8 @@ function Scene() {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <LabProvider source={bridge()}>
-      <LabWindow tab={location.hash.slice(1) || "freezer"} copy={window.bionet.copy} save={window.bionet.save} extra={[{ id: "scene", label: "Lab", view: <Scene /> }, { id: "tools", label: "Tools", view: <Tools /> }]} />
+      <LabWindow tab={location.hash.slice(1) || "freezer"} copy={window.bionet.copy} save={window.bionet.save} extra={[{ id: "scene", label: "Lab", view: <Scene /> }, { id: "tools", label: "Tools", view: <Tools /> },
+                         { id: "glossary", label: "Glossary", view: <section className="card"><ReviewSheet /></section> }]} />
     </LabProvider>
   </StrictMode>,
 );
