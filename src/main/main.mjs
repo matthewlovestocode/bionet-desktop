@@ -77,10 +77,11 @@ app.whenReady().then(async () => {
     for (const [action, written] of JSON.parse(readFileSync(script, "utf8"))) {
       // A script may pause, for a sync to finish before the next thing depends on it.
       if (action === "wait") { await new Promise((done) => setTimeout(done, Number(written))); continue; }
-      // A script cannot know a checksum or an item's ID in advance, so it may name them by position.
+      // A script cannot know a checksum, an item's ID or a place's in advance, so it may name them by position.
       const payload = JSON.parse(JSON.stringify(written ?? null)
         .replace(/\{\{part(\d+)\}\}/g, (_all, at) => lab.snapshot().lab?.parts[Number(at)]?.checksum ?? "")
-        .replace(/\{\{item(\d+)\}\}/g, (_all, at) => lab.snapshot().lab?.items[Number(at)]?.item ?? ""));
+        .replace(/\{\{item(\d+)\}\}/g, (_all, at) => lab.snapshot().lab?.items[Number(at)]?.item ?? "")
+        .replace(/\{\{place(\d+)\}\}/g, (_all, at) => lab.snapshot().lab?.places[Number(at)]?.place ?? ""));
       const answer = await act(action, payload);
       console.log(`${action}: ${answer.ok ? "ok" : answer.error}`);
     }

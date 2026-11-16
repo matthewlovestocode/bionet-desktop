@@ -6,10 +6,12 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import type { Action, Answer, LabSnapshot, LabSource } from "@biolibs/bionet-client";
-import { LabWindow, TABS, type Tab } from "@biolibs/bionet-panels";
-import { LabProvider } from "@biolibs/bionet-react";
+import { LabWindow } from "@biolibs/bionet-panels";
+import { LabProvider, useLab } from "@biolibs/bionet-react";
+import { LabView } from "@biolibs/bionet-scene";
 import "@biolibs/bionet-theme/theme.css";
 import "@biolibs/bionet-panels/panels.css";
+import "@biolibs/bionet-scene/scene.css";
 import "./page.css";
 
 declare global {
@@ -41,13 +43,17 @@ function bridge(): LabSource {
   };
 }
 
-const asked = location.hash.slice(1);
-const tab: Tab = (TABS as readonly string[]).includes(asked) ? (asked as Tab) : "freezer";
+/** The lab drawn in three dimensions, from the same record the other tabs show. */
+function Scene() {
+  const lab = useLab()?.lab;
+  if (lab === null || lab === undefined) return null;
+  return <div className="scene"><LabView lab={lab} name={lab.name ?? "Lab"} /></div>;
+}
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <LabProvider source={bridge()}>
-      <LabWindow tab={tab} copy={window.bionet.copy} />
+      <LabWindow tab={location.hash.slice(1) || "freezer"} copy={window.bionet.copy} extra={[{ id: "scene", label: "Lab", view: <Scene /> }]} />
     </LabProvider>
   </StrictMode>,
 );

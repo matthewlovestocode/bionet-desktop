@@ -1,3 +1,5 @@
 /* The page around the window: fill it, and sit on the theme's ground. No colour is chosen here. */
 html, body, #root { height: 100%; }
 body { margin: 0; background: var(--bionet-ground); }
+/* The drawing of the lab takes what is left of the window under the tabs. */
+.scene { height: calc(100vh - 11rem); min-height: 22rem; border-radius: 10px; overflow: hidden; }
