@@ -7,7 +7,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import type { Action, Answer, LabSnapshot, LabSource } from "@biolibs/bionet-client";
 import { LabWindow } from "@biolibs/bionet-panels";
-import { LabProvider, useLab } from "@biolibs/bionet-react";
+import { LabProvider, useAct, useLab } from "@biolibs/bionet-react";
 import { LabView } from "@biolibs/bionet-scene";
 import "@biolibs/bionet-theme/theme.css";
 import "@biolibs/bionet-panels/panels.css";
@@ -43,11 +43,16 @@ function bridge(): LabSource {
   };
 }
 
-/** The lab drawn in three dimensions, from the same record the other tabs show. */
+/** The lab drawn in three dimensions, from the same record the other tabs show, and arranged by hand. */
 function Scene() {
   const lab = useLab()?.lab;
+  const act = useAct();
   if (lab === null || lab === undefined) return null;
-  return <div className="scene"><LabView lab={lab} name={lab.name ?? "Lab"} /></div>;
+  return (
+    <div className="scene">
+      <LabView lab={lab} name={lab.name ?? "Lab"} onStand={(place, standing) => act("standPlace", { place, standing })} />
+    </div>
+  );
 }
 
 createRoot(document.getElementById("root")!).render(
