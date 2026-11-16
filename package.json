@@ -1,0 +1,31 @@
+{
+  "name": "bionet-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A lab's freezer, kept by the people in the lab: works offline, syncs when online.",
+  "type": "module",
+  "main": "src/main/main.mjs",
+  "scripts": {
+    "build": "vite build",
+    "start": "electron .",
+    "dev": "vite build && electron .",
+    "typecheck": "tsc --noEmit",
+    "try-core": "node scripts/try-core.mjs",
+    "try-app": "vite build && node scripts/try-app.mjs"
+  },
+  "dependencies": {
+    "@biolibs/bionet": "^1.2.0",
+    "@biolibs/opencloning": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^5",
+    "electron": "45.3.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "typescript": "^5",
+    "vite": "^7"
+  }
+}
