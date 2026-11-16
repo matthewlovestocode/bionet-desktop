@@ -10,7 +10,10 @@
     "start": "electron .",
     "dev": "vite build && electron .",
     "typecheck": "tsc --noEmit",
-    "try-app": "vite build && node scripts/try-app.mjs"
+    "try-app": "vite build && node scripts/try-app.mjs",
+    "local": "node scripts/local-packages.mjs on",
+    "local:off": "node scripts/local-packages.mjs off",
+    "local:status": "node scripts/local-packages.mjs"
   },
   "dependencies": {
     "@biolibs/bionet-client": "^0.2.0",

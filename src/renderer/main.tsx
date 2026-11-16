@@ -50,7 +50,10 @@ function Scene() {
   if (lab === null || lab === undefined) return null;
   return (
     <div className="scene">
-      <LabView lab={lab} name={lab.name ?? "Lab"} onStand={(place, standing) => act("standPlace", { place, standing })} />
+      <LabView lab={lab} name={lab.name ?? "Lab"}
+               onStand={(place, standing) => act("standPlace", { place, standing })}
+               onAdd={(place) => act("addPlace", place)}
+               onRetire={(place) => act("retirePlace", { place })} />
     </div>
   );
 }

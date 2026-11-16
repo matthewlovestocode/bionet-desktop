@@ -38,6 +38,23 @@ A second device on the same machine, for trying two members side by side:
 npm start -- --profile=bob
 ```
 
+## Working on the packages
+
+Nearly every change to this app is a change to a package in [biolibs](https://github.com/matthewlovestocode/biolibs).
+With a checkout of it beside this one, the app can use those packages as they are on disk, so a
+change is tried without publishing anything:
+
+```
+npm run local           # use the packages in ../biolibs
+npm run local:status    # say which are in use
+npm run local:off       # put the published ones back
+```
+
+While linked, keep the packages built with `npx tsc -b --watch` in biolibs, and `npm run dev` here
+picks up what changed. Only folders inside `node_modules` are replaced: `package.json` and the
+lockfile are not touched, and `npm install` undoes it. Set `BIOLIBS` if the checkout is somewhere
+else.
+
 ## Joining a lab
 
 1. The new member opens the app, says who they are, and sends a keeper **their device's key**.
