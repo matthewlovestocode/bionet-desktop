@@ -22,14 +22,17 @@ const app = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const biolibs = resolve(process.env.BIOLIBS ?? join(app, "..", "biolibs"));
 const installed = join(app, "node_modules", "@biolibs");
 
-/** The Bionet packages this app has installed, which are the ones worth linking. */
-const names = existsSync(installed) ? readdirSync(installed).filter((name) => name.startsWith("bionet")).sort() : [];
-const linked = (/** @type {string} */ name) => lstatSync(join(installed, name)).isSymbolicLink();
+/** The Bionet packages: the ones installed here, and any in the checkout that are not published yet. */
+const bionet = (/** @type {string} */ dir) => (existsSync(dir) ? readdirSync(dir).filter((name) => name.startsWith("bionet")) : []);
+const names = [...new Set([...bionet(installed), ...bionet(join(biolibs, "packages"))])].sort();
+const linked = (/** @type {string} */ name) => existsSync(join(installed, name)) && lstatSync(join(installed, name)).isSymbolicLink();
 const version = (/** @type {string} */ dir) => JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).version;
 
 const say = () => {
   for (const name of names) {
-    console.log(`  ${name.padEnd(16)} ${linked(name) ? `local   ${version(join(biolibs, "packages", name))}  (${join(biolibs, "packages", name)})` : `npm     ${version(join(installed, name))}`}`);
+    const state = linked(name) ? `local   ${version(join(biolibs, "packages", name))}  (${join(biolibs, "packages", name)})`
+      : existsSync(join(installed, name)) ? `npm     ${version(join(installed, name))}` : "not installed: it is only in the checkout";
+    console.log(`  ${name.padEnd(16)} ${state}`);
   }
 };
 
@@ -39,12 +42,13 @@ if (what === "on") {
     console.error(`There is no biolibs checkout at ${biolibs}. Set BIOLIBS to where it is.`);
     process.exit(1);
   }
-  const unbuilt = names.filter((name) => !existsSync(join(biolibs, "packages", name, "dist")));
+  const here = names.filter((name) => existsSync(join(biolibs, "packages", name)));
+  const unbuilt = here.filter((name) => !existsSync(join(biolibs, "packages", name, "dist")));
   if (unbuilt.length > 0) {
     console.error(`These are not built yet: ${unbuilt.join(", ")}. Run "npx tsc -b" in ${biolibs} first.`);
     process.exit(1);
   }
-  for (const name of names) {
+  for (const name of here) {
     rmSync(join(installed, name), { recursive: true, force: true });
     symlinkSync(join(biolibs, "packages", name), join(installed, name), "dir");
   }
@@ -56,7 +60,13 @@ if (what === "on") {
   // Started through "npm run", this inherits npm's settings for that run, some of which an install
   // refuses. The install is given a clean slate.
   const env = Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.toLowerCase().startsWith("npm_")));
-  execFileSync("npm", ["install"], { cwd: app, stdio: "inherit", env });
+  try {
+    execFileSync("npm", ["install"], { cwd: app, stdio: "inherit", env });
+  } catch {
+    console.error("\nThe published packages could not all be installed. If the app needs one that is not published yet,");
+    console.error('it only runs linked: "npm run local" puts the links back.');
+    process.exit(1);
+  }
   console.log("Using the published packages:");
   // npm has put the folders back, so read them afresh.
   for (const name of readdirSync(installed).filter((one) => one.startsWith("bionet")).sort()) console.log(`  ${name.padEnd(16)} npm     ${version(join(installed, name))}`);

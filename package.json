@@ -21,6 +21,7 @@
     "@biolibs/bionet-react": "^0.2.0",
     "@biolibs/bionet-scene": "^0.3.0",
     "@biolibs/bionet-theme": "^0.1.0",
+    "@biolibs/bionet-tools": "^0.1.0",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.2",
     "@react-three/postprocessing": "^3.2.2",

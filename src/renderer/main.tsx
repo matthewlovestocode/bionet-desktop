@@ -3,15 +3,17 @@
  * comes from `@biolibs/bionet-panels`, and the colours come from `@biolibs/bionet-theme`. All this
  * file does is join them, by making the bridge to the main process look like any other lab.
  */
-import { StrictMode } from "react";
+import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { Action, Answer, LabSnapshot, LabSource } from "@biolibs/bionet-client";
 import { LabWindow } from "@biolibs/bionet-panels";
 import { LabProvider, useAct, useLab } from "@biolibs/bionet-react";
 import { LabView } from "@biolibs/bionet-scene";
+import { InstrumentTool } from "@biolibs/bionet-tools";
 import "@biolibs/bionet-theme/theme.css";
 import "@biolibs/bionet-panels/panels.css";
 import "@biolibs/bionet-scene/scene.css";
+import "@biolibs/bionet-tools/tools.css";
 import "./page.css";
 
 declare global {
@@ -43,17 +45,23 @@ function bridge(): LabSource {
   };
 }
 
-/** The lab drawn in three dimensions, from the same record the other tabs show, and arranged by hand. */
+/**
+ * The lab drawn in three dimensions, from the same record the other tabs show. It is arranged by
+ * hand there, and pressing an instrument opens the tool for it in the scene's place.
+ */
 function Scene() {
   const lab = useLab()?.lab;
   const act = useAct();
+  const [using, setUsing] = useState<string | null>(null);
   if (lab === null || lab === undefined) return null;
+  if (using !== null) return <InstrumentTool place={using} onDone={() => setUsing(null)} />;
   return (
     <div className="scene">
       <LabView lab={lab} name={lab.name ?? "Lab"}
                onStand={(place, standing) => act("standPlace", { place, standing })}
                onAdd={(place) => act("addPlace", place)}
-               onRetire={(place) => act("retirePlace", { place })} />
+               onRetire={(place) => act("retirePlace", { place })}
+               onUse={setUsing} />
     </div>
   );
 }

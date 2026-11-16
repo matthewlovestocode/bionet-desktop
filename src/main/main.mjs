@@ -77,6 +77,16 @@ app.whenReady().then(async () => {
     for (const [action, written] of JSON.parse(readFileSync(script, "utf8"))) {
       // A script may pause, for a sync to finish before the next thing depends on it.
       if (action === "wait") { await new Promise((done) => setTimeout(done, Number(written))); continue; }
+      // A script may also work the window as a person would, so that what is tried is what is used:
+      // press a point, run a line in the page (to choose from a list, or press a button by its
+      // words), or take a picture on the way.
+      if (action === "click") {
+        const [x, y] = written;
+        for (const type of /** @type {const} */ (["mouseDown", "mouseUp"])) window.webContents.sendInputEvent({ type, x, y, button: "left", clickCount: 1 });
+        continue;
+      }
+      if (action === "ui") { console.log(`ui: ${JSON.stringify(await window.webContents.executeJavaScript(String(written), true))}`); continue; }
+      if (action === "shot") { writeFileSync(String(written), (await window.webContents.capturePage()).toPNG()); continue; }
       // A script cannot know a checksum, an item's ID or a place's in advance, so it may name them by position.
       const payload = JSON.parse(JSON.stringify(written ?? null)
         .replace(/\{\{part(\d+)\}\}/g, (_all, at) => lab.snapshot().lab?.parts[Number(at)]?.checksum ?? "")

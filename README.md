@@ -70,6 +70,11 @@ npm run try-app
 runs the real app as two devices, driven through the same door the window uses, against the real web
 peer from `../lab-wren` (run `npm run build` there first), photographing each step.
 
+A script given with `--script` can also work the window as a person would, which is how the Lab tab
+and the tools are tried: `["click", [x, y]]` presses a point, `["ui", "…"]` runs a line in the page
+(to choose from a list, or press a button by its words), `["shot", "file.png"]` takes a picture on
+the way, and `["wait", ms]` pauses.
+
 ## It owns nothing
 
 Everything a member can do is in [`@biolibs/bionet-client`](https://www.npmjs.com/package/@biolibs/bionet-client).
