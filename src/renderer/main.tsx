@@ -8,7 +8,7 @@ import { createRoot } from "react-dom/client";
 import type { Action, Answer, LabSnapshot, LabSource } from "@biolibs/bionet-client";
 import { LabWindow } from "@biolibs/bionet-panels";
 import { LabProvider, useAct, useLab } from "@biolibs/bionet-react";
-import { InstrumentStage, LabView } from "@biolibs/bionet-scene";
+import { InstrumentStage, LabView, type NewPlace, type Standing } from "@biolibs/bionet-scene";
 import { Demo } from "@biolibs/bionet-demo";
 import { InstrumentTool, Tools, instrumentFor, moleculeOf, toolFor, useDigestBench, useLigationBench, usePcrBench } from "@biolibs/bionet-tools";
 import { ReviewSheet } from "@biolibs/glossary-react";
@@ -79,27 +79,37 @@ function LigationAtBlock({ place, onDone }: { place: string | null; onDone?: () 
 
 /**
  * The lab drawn in three dimensions, from the same record the other tabs show. It is arranged by
- * hand there, and pressing an instrument opens the tool for it in the scene's place.
+ * hand there, and pressing an instrument works it where it stands.
+ *
+ * Using a machine is not a different window: the room stays, the view walks up to the machine, and
+ * the tool for it comes in beside the scene. So every tool is asked for here whether or not it is
+ * open, which is what lets the one scene carry on across opening and closing one.
  */
 function Scene() {
   const lab = useLab()?.lab;
   const act = useAct();
   const [using, setUsing] = useState<string | null>(null);
+  const stood = lab?.places.find((one) => one.place === using);
+  const tool = toolFor(stood);
+  const at = stood === undefined ? null : { id: stood.place, name: stood.name };
+  const leave = (): void => setUsing(null);
+  const pcr = usePcrBench({ instrument: tool === "pcr" ? at : null, onDone: leave });
+  const digest = useDigestBench({ instrument: tool === "digest" ? at : null, onDone: leave });
+  const ligation = useLigationBench({ instrument: tool === "ligation" ? at : null, onDone: leave });
+  const bench = tool === "pcr" ? pcr : tool === "digest" ? digest : tool === "ligation" ? ligation : null;
   if (lab === null || lab === undefined) return null;
-  if (using !== null) {
-    const tool = toolFor(lab.places.find((one) => one.place === using));
-    return tool === "pcr" ? <PcrAtMachine place={using} onDone={() => setUsing(null)} />
-      : tool === "digest" ? <DigestAtStation place={using} onDone={() => setUsing(null)} />
-      : tool === "ligation" ? <LigationAtBlock place={using} onDone={() => setUsing(null)} />
-      : <InstrumentTool place={using} onDone={() => setUsing(null)} />;
-  }
+  // An instrument the app has no tool for still has its record to show, and that is a page of its own.
+  if (using !== null && bench === null) return <InstrumentTool place={using} onDone={leave} />;
+  const working = using !== null && bench !== null;
   return (
     <div className="scene">
       <LabView lab={lab} name={lab.name ?? "Lab"}
-               onStand={(place, standing) => act("standPlace", { place, standing })}
-               onAdd={(place) => act("addPlace", place)}
-               onRetire={(place) => act("retirePlace", { place })}
-               onUse={setUsing}
+               {...(working ? { focus: { place: using }, using: { place: using, ...bench.stage, panel: bench.panel } } : {
+                 onStand: (place: string, standing: Standing | null) => act("standPlace", { place, standing }),
+                 onAdd: (place: NewPlace) => act("addPlace", place),
+                 onRetire: (place: string) => act("retirePlace", { place }),
+                 onUse: setUsing,
+               })}
                molecule={(item) => { const part = lab.parts.find((one) => one.checksum === lab.items.find((each) => each.item === item)?.part); return part === undefined ? null : moleculeOf(part); }} />
     </div>
   );
