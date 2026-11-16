@@ -75,6 +75,8 @@ app.whenReady().then(async () => {
   const script = flag("script");
   if (script !== null) {
     for (const [action, written] of JSON.parse(readFileSync(script, "utf8"))) {
+      // A script may pause, for a sync to finish before the next thing depends on it.
+      if (action === "wait") { await new Promise((done) => setTimeout(done, Number(written))); continue; }
       // A script cannot know a checksum or an item's ID in advance, so it may name them by position.
       const payload = JSON.parse(JSON.stringify(written ?? null)
         .replace(/\{\{part(\d+)\}\}/g, (_all, at) => lab.snapshot().lab?.parts[Number(at)]?.checksum ?? "")
