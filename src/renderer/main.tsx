@@ -9,12 +9,14 @@ import type { Action, Answer, LabSnapshot, LabSource } from "@biolibs/bionet-cli
 import { LabWindow } from "@biolibs/bionet-panels";
 import { LabProvider, useAct, useLab } from "@biolibs/bionet-react";
 import { InstrumentStage, LabView } from "@biolibs/bionet-scene";
+import { Demo } from "@biolibs/bionet-demo";
 import { InstrumentTool, Tools, instrumentFor, moleculeOf, toolFor, useDigestBench, useLigationBench, usePcrBench } from "@biolibs/bionet-tools";
 import { ReviewSheet } from "@biolibs/glossary-react";
 import "@biolibs/bionet-theme/theme.css";
 import "@biolibs/bionet-panels/panels.css";
 import "@biolibs/bionet-scene/scene.css";
 import "@biolibs/bionet-tools/tools.css";
+import "@biolibs/bionet-demo/demo.css";
 import "@biolibs/glossary-react/glossary.css";
 import "./page.css";
 
@@ -115,7 +117,8 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <LabProvider source={bridge()}>
       <LabWindow tab={location.hash.slice(1) || "freezer"} copy={window.bionet.copy} save={window.bionet.save} extra={[{ id: "scene", label: "Lab", view: <Scene /> }, { id: "tools", label: "Tools", view: <Bench /> },
-                         { id: "glossary", label: "Glossary", view: <section className="card"><ReviewSheet /></section> }]} />
+                         { id: "glossary", label: "Glossary", view: <section className="card"><ReviewSheet /></section> },
+                         { id: "demo", label: "Demo", view: <Demo /> }]} />
     </LabProvider>
   </StrictMode>,
 );
