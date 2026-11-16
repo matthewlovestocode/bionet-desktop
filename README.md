@@ -72,3 +72,7 @@ src/renderer/  what is drawn: React, given the lab as plain data
 - Direct connections between devices. Everything goes through the web peer.
 - Installers, signing and updates. It runs from source.
 - Backing up or moving a device's key.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
