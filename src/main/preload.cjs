@@ -12,6 +12,8 @@ contextBridge.exposeInMainWorld("bionet", {
     ipcRenderer.on("bionet:state", heard);
     return () => ipcRenderer.removeListener("bionet:state", heard);
   },
+  /** Hand the person a file to keep: they choose where. Resolves to whether it was saved. */
+  save: (name, text) => ipcRenderer.invoke("bionet:save", name, text),
   /** Put some words on the clipboard. */
   copy: (words) => ipcRenderer.invoke("bionet:copy", words),
 });

@@ -24,6 +24,7 @@ declare global {
       do: (action: Action, payload?: unknown) => Promise<Answer>;
       onState: (listener: (state: LabSnapshot) => void) => () => void;
       copy: (words: string) => Promise<void>;
+      save: (name: string, text: string) => Promise<boolean>;
     };
   }
 }
@@ -69,7 +70,7 @@ function Scene() {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <LabProvider source={bridge()}>
-      <LabWindow tab={location.hash.slice(1) || "freezer"} copy={window.bionet.copy} extra={[{ id: "scene", label: "Lab", view: <Scene /> }, { id: "tools", label: "Tools", view: <Tools /> }]} />
+      <LabWindow tab={location.hash.slice(1) || "freezer"} copy={window.bionet.copy} save={window.bionet.save} extra={[{ id: "scene", label: "Lab", view: <Scene /> }, { id: "tools", label: "Tools", view: <Tools /> }]} />
     </LabProvider>
   </StrictMode>,
 );

@@ -59,6 +59,19 @@ app.whenReady().then(async () => {
   ipcMain.handle("bionet:do", (_event, action, payload) => act(String(action), payload));
   ipcMain.handle("bionet:copy", (_event, words) => clipboard.writeText(String(words).slice(0, 5_000)));
 
+  // Handing over a file, such as the sealed key. The person chooses where it goes; the window only
+  // ever supplies a name to suggest and the text, and learns whether it was saved.
+  const saveTo = flag("save-to");
+  ipcMain.handle("bionet:save", async (_event, name, text) => {
+    const suggested = String(name).replace(/[^A-Za-z0-9._-]/g, "-").slice(0, 120) || "bionet.json";
+    // For trying the app without a person: a folder to save into, in place of asking.
+    const chosen = saveTo !== null ? { canceled: false, filePath: join(saveTo, suggested) }
+      : await dialog.showSaveDialog(window, { title: "Save", defaultPath: join(app.getPath("documents"), suggested) });
+    if (chosen.canceled || chosen.filePath === undefined || chosen.filePath === "") return false;
+    writeFileSync(chosen.filePath, String(text).slice(0, 100_000_000), { mode: 0o600 });
+    return true;
+  });
+
   const window = new BrowserWindow({
     width: 1100, height: 780, minWidth: 720, minHeight: 520, title: "Bionet",
     backgroundColor: COLOURS[nativeTheme.shouldUseDarkColors ? "dark" : "light"].ground,
