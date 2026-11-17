@@ -10,7 +10,8 @@ import { Adviser, AdviserStrip, LabWindow, Strains, type AdviserSeen } from "@bi
 import { LabProvider, useAct, useLab } from "@biolibs/bionet-react";
 import { LabView, type NewPlace, type Standing } from "@biolibs/bionet-scene";
 import { Demo, LabAt, stopFor, type ShownAt, type TourStop } from "@biolibs/bionet-demo";
-import { InstrumentTool, Tools, moleculeOf, toolFor, useDigestBench, useLigationBench, usePcrBench } from "@biolibs/bionet-tools";
+import { InstrumentTool, Tools, WorkToDo, moleculeOf, planOfWork, toolFor, useDigestBench, useLigationBench, usePcrBench,
+         type DeskTool, type ToolName } from "@biolibs/bionet-tools";
 import { ReviewSheet } from "@biolibs/glossary-react";
 import "@biolibs/bionet-theme/theme.css";
 import "@biolibs/bionet-panels/panels.css";
@@ -143,10 +144,10 @@ type PcrTubes = { template: string; forward: string; reverse: string };
  * Every tool, each in the lab at the machine it is used at. They are all the one scene, so choosing
  * another moves the view from one machine to the next instead of putting a new picture up.
  */
-function Bench() {
+function Bench({ tool }: { tool?: ToolName | DeskTool }) {
   // A pair that has been designed and has arrived leads straight on to its PCR, opened on those tubes.
   const [pcrOn, setPcrOn] = useState<PcrTubes | null>(null);
-  return <Tools views={{ sequences: <LabAt stop={{ at: "sequences" }} />,
+  return <Tools {...(tool === undefined ? {} : { tool })} views={{ sequences: <LabAt stop={{ at: "sequences" }} />,
                          assembly: <LabAt stop={{ at: "assembly" }} />,
                          codons: <LabAt stop={{ at: "codons" }} />,
                          verify: <LabAt stop={{ at: "verify" }} />,
@@ -159,16 +160,30 @@ function Bench() {
 /** The window: the lab's own tabs, and the ones this app adds. */
 function App() {
   const [door, setDoor] = useDoor();
-  const strains = useLab()?.lab?.strains.length ?? 0;
+  const lab = useLab()?.lab;
+  const strains = lab?.strains.length ?? 0;
+  // How many steps could be carried out now, which is the one number worth seeing from anywhere.
+  const ready = lab === null || lab === undefined ? 0 : planOfWork(lab).ready.length;
+  // Where the window has been sent, and what to open when it gets there. A step of the work knows
+  // which tool would carry it out; a transformation is not run at a machine, so it goes to Strains.
+  const [sent, setSent] = useState<{ tab: string; tool?: ToolName | DeskTool } | null>(null);
+  const goAndDo = (kind: string): void => {
+    const tool = kind === "assembly" ? "assembly" as const
+      : kind === "pcr" || kind === "digest" || kind === "ligation" || kind === "induction" ? kind
+      : null;
+    setSent(tool === null ? { tab: "strains" } : { tab: "tools", tool });
+  };
   // Said on the tab while the adviser is at it, so that it is noticed from anywhere in the window.
   const [, tick] = useState(0);
   useEffect(() => { const timer = setInterval(() => tick((was) => was + 1), 15_000); return () => clearInterval(timer); }, []);
   const latest = door.seen.at(-1);
   const atWork = latest !== undefined && Date.now() - Date.parse(latest.at) < 90_000;
   return (
-    <LabWindow tab={location.hash.slice(1) || "freezer"} copy={window.bionet.copy} save={window.bionet.save}
+    <LabWindow tab={location.hash.slice(1) || "freezer"} {...(sent === null ? {} : { at: sent.tab })}
+               copy={window.bionet.copy} save={window.bionet.save}
                extra={[{ id: "strains", label: `Strains · ${strains}`, view: <Strains /> },
-                       { id: "scene", label: "Lab", view: <Scene /> }, { id: "tools", label: "Tools", view: <Bench /> },
+                       { id: "work", label: ready > 0 ? `Work · ${ready} ready` : "Work", view: <WorkToDo onOpen={(plan) => goAndDo(plan.kind)} /> },
+                       { id: "scene", label: "Lab", view: <Scene /> }, { id: "tools", label: "Tools", view: <Bench {...(sent?.tool === undefined ? {} : { tool: sent.tool })} /> },
                        { id: "adviser", label: atWork ? "Adviser · at work" : "Adviser", view: <AdviserTab door={door} setDoor={setDoor} /> },
                        { id: "glossary", label: "Glossary", view: <section className="card"><ReviewSheet /></section> },
                        { id: "demo", label: "Demo", view: <Demo /> }]} />
