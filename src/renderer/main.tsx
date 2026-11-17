@@ -147,6 +147,7 @@ function Bench() {
   // A pair that has been designed and has arrived leads straight on to its PCR, opened on those tubes.
   const [pcrOn, setPcrOn] = useState<PcrTubes | null>(null);
   return <Tools views={{ sequences: <LabAt stop={{ at: "sequences" }} />,
+                         assembly: <LabAt stop={{ at: "assembly" }} />,
                          primers: (go) => <LabAt stop={{ at: "primers" }} onPcr={(tubes) => { setPcrOn(tubes); go("pcr"); }} />,
                          pcr: <LabAt stop={{ at: "pcr", ...(pcrOn === null ? {} : { start: pcrOn }) }} />,
                          digest: <LabAt stop={{ at: "digest" }} />, ligation: <LabAt stop={{ at: "ligation" }} /> }} />;
