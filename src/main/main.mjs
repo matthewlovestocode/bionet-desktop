@@ -225,7 +225,8 @@ app.whenReady().then(async () => {
       const payload = JSON.parse(JSON.stringify(written ?? null)
         .replace(/\{\{part(\d+)\}\}/g, (_all, at) => lab.snapshot().lab?.parts[Number(at)]?.checksum ?? "")
         .replace(/\{\{item(\d+)\}\}/g, (_all, at) => lab.snapshot().lab?.items[Number(at)]?.item ?? "")
-        .replace(/\{\{place(\d+)\}\}/g, (_all, at) => lab.snapshot().lab?.places[Number(at)]?.place ?? ""));
+        .replace(/\{\{place(\d+)\}\}/g, (_all, at) => lab.snapshot().lab?.places[Number(at)]?.place ?? "")
+        .replace(/\{\{strain(\d+)\}\}/g, (_all, at) => lab.snapshot().lab?.strains[Number(at)]?.strain ?? ""));
       const answer = await act(action, payload);
       console.log(`${action}: ${answer.ok ? "ok" : answer.error}`);
     }

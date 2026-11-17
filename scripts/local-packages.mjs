@@ -23,14 +23,19 @@ const biolibs = resolve(process.env.BIOLIBS ?? join(app, "..", "biolibs"));
 const installed = join(app, "node_modules", "@biolibs");
 
 /**
- * What to link: the Bionet packages and the glossary they explain themselves with, and any other package in the checkout that is not installed
- * here at all. A linked package finds what it imports in this app, so an engine it has newly come
- * to need, and that npm has not been asked for yet, has to be linked as well.
+ * What to link: everything the checkout has, and anything already linked, so that `off` can undo it.
+ *
+ * It used to be the Bionet packages, the glossary, and whatever the checkout had that npm had not
+ * been asked for — which left an engine the app already installed from npm, such as `@biolibs/gel`,
+ * on its published version while the local Bionet packages were built against a newer one. The
+ * build then failed on an export that exists in the checkout and not on npm, which is a confusing
+ * way to be told that half the tree is local. Linking the whole checkout is what "use the local
+ * packages" should mean, and `off` reinstalls from the lockfile, transitive dependencies included.
  */
 const inside = (/** @type {string} */ dir) => (existsSync(dir) ? readdirSync(dir).filter((name) => existsSync(join(dir, name, "package.json")) || lstatSync(join(dir, name)).isSymbolicLink()) : []);
 const here = inside(installed);
 const checkout = inside(join(biolibs, "packages"));
-const names = [...new Set([...here, ...checkout].filter((name) => name.startsWith("bionet") || name.startsWith("glossary") || !here.includes(name) || lstatSync(join(installed, name)).isSymbolicLink()))].sort();
+const names = [...new Set([...here, ...checkout].filter((name) => checkout.includes(name) || lstatSync(join(installed, name)).isSymbolicLink()))].sort();
 const linked = (/** @type {string} */ name) => existsSync(join(installed, name)) && lstatSync(join(installed, name)).isSymbolicLink();
 const version = (/** @type {string} */ dir) => JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).version;
 

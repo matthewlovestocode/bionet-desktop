@@ -152,7 +152,8 @@ function Bench() {
                          verify: <LabAt stop={{ at: "verify" }} />,
                          primers: (go) => <LabAt stop={{ at: "primers" }} onPcr={(tubes) => { setPcrOn(tubes); go("pcr"); }} />,
                          pcr: <LabAt stop={{ at: "pcr", ...(pcrOn === null ? {} : { start: pcrOn }) }} />,
-                         digest: <LabAt stop={{ at: "digest" }} />, ligation: <LabAt stop={{ at: "ligation" }} /> }} />;
+                         digest: <LabAt stop={{ at: "digest" }} />, ligation: <LabAt stop={{ at: "ligation" }} />,
+                         induction: <LabAt stop={{ at: "induction" }} /> }} />;
 }
 
 /** The window: the lab's own tabs, and the ones this app adds. */
