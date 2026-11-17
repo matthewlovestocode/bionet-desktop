@@ -148,6 +148,8 @@ function Bench() {
   const [pcrOn, setPcrOn] = useState<PcrTubes | null>(null);
   return <Tools views={{ sequences: <LabAt stop={{ at: "sequences" }} />,
                          assembly: <LabAt stop={{ at: "assembly" }} />,
+                         codons: <LabAt stop={{ at: "codons" }} />,
+                         verify: <LabAt stop={{ at: "verify" }} />,
                          primers: (go) => <LabAt stop={{ at: "primers" }} onPcr={(tubes) => { setPcrOn(tubes); go("pcr"); }} />,
                          pcr: <LabAt stop={{ at: "pcr", ...(pcrOn === null ? {} : { start: pcrOn }) }} />,
                          digest: <LabAt stop={{ at: "digest" }} />, ligation: <LabAt stop={{ at: "ligation" }} /> }} />;
