@@ -6,7 +6,7 @@
 import { StrictMode, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { Action, Answer, LabSnapshot, LabSource } from "@biolibs/bionet-client";
-import { Adviser, AdviserStrip, LabWindow, type AdviserSeen } from "@biolibs/bionet-panels";
+import { Adviser, AdviserStrip, LabWindow, Strains, type AdviserSeen } from "@biolibs/bionet-panels";
 import { LabProvider, useAct, useLab } from "@biolibs/bionet-react";
 import { LabView, type NewPlace, type Standing } from "@biolibs/bionet-scene";
 import { Demo, LabAt, stopFor, type ShownAt, type TourStop } from "@biolibs/bionet-demo";
@@ -155,6 +155,7 @@ function Bench() {
 /** The window: the lab's own tabs, and the ones this app adds. */
 function App() {
   const [door, setDoor] = useDoor();
+  const strains = useLab()?.lab?.strains.length ?? 0;
   // Said on the tab while the adviser is at it, so that it is noticed from anywhere in the window.
   const [, tick] = useState(0);
   useEffect(() => { const timer = setInterval(() => tick((was) => was + 1), 15_000); return () => clearInterval(timer); }, []);
@@ -162,7 +163,8 @@ function App() {
   const atWork = latest !== undefined && Date.now() - Date.parse(latest.at) < 90_000;
   return (
     <LabWindow tab={location.hash.slice(1) || "freezer"} copy={window.bionet.copy} save={window.bionet.save}
-               extra={[{ id: "scene", label: "Lab", view: <Scene /> }, { id: "tools", label: "Tools", view: <Bench /> },
+               extra={[{ id: "strains", label: `Strains · ${strains}`, view: <Strains /> },
+                       { id: "scene", label: "Lab", view: <Scene /> }, { id: "tools", label: "Tools", view: <Bench /> },
                        { id: "adviser", label: atWork ? "Adviser · at work" : "Adviser", view: <AdviserTab door={door} setDoor={setDoor} /> },
                        { id: "glossary", label: "Glossary", view: <section className="card"><ReviewSheet /></section> },
                        { id: "demo", label: "Demo", view: <Demo /> }]} />
