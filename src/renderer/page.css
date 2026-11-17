@@ -3,3 +3,7 @@ html, body, #root { height: 100%; }
 body { margin: 0; background: var(--bionet-ground); }
 /* The drawing of the lab takes what is left of the window under the tabs. */
 .scene { height: calc(100vh - 11rem); min-height: 22rem; border-radius: 10px; overflow: hidden; }
+/* Watching the adviser: a strip saying what it is doing, and the lab under it. */
+.watching .scene { height: calc(100vh - 17rem); }
+.watching .adviserstrip { margin-bottom: .6rem; }
+.watching .adviserstrip p { margin: 0; flex: 1; }

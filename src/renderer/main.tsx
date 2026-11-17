@@ -6,11 +6,11 @@
 import { StrictMode, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { Action, Answer, LabSnapshot, LabSource } from "@biolibs/bionet-client";
-import { Adviser, LabWindow, type AdviserSeen } from "@biolibs/bionet-panels";
+import { Adviser, AdviserStrip, LabWindow, type AdviserSeen } from "@biolibs/bionet-panels";
 import { LabProvider, useAct, useLab } from "@biolibs/bionet-react";
-import { InstrumentStage, LabView, type NewPlace, type Standing } from "@biolibs/bionet-scene";
-import { Demo } from "@biolibs/bionet-demo";
-import { InstrumentTool, SequencesTool, Tools, instrumentFor, moleculeOf, toolFor, useDigestBench, useLigationBench, usePcrBench, usePrimerBench } from "@biolibs/bionet-tools";
+import { LabView, type NewPlace, type Standing } from "@biolibs/bionet-scene";
+import { Demo, LabAt, stopFor, type ShownAt, type TourStop } from "@biolibs/bionet-demo";
+import { InstrumentTool, Tools, moleculeOf, toolFor, useDigestBench, useLigationBench, usePcrBench } from "@biolibs/bionet-tools";
 import { ReviewSheet } from "@biolibs/glossary-react";
 import "@biolibs/bionet-theme/theme.css";
 import "@biolibs/bionet-panels/panels.css";
@@ -43,17 +43,42 @@ declare global {
 /** The adviser's door as the main process reports it: whether it is open, where, and what came through. */
 interface DoorState { on: boolean; url: string | null; seen: AdviserSeen[] }
 
-/**
- * The adviser this device hosts, with the door the main process keeps for it. The door is the main
- * process's and the card is the panels'; this only passes one to the other.
- */
-function AdviserTab() {
+/** The adviser's door, kept up with as the main process reports it. */
+function useDoor(): [DoorState, (door: DoorState) => void] {
   const [door, setDoor] = useState<DoorState>({ on: false, url: null, seen: [] });
   useEffect(() => {
     void window.bionet.adviser.state().then(setDoor);
     return window.bionet.adviser.onState(setDoor);
   }, []);
-  return <Adviser door={{ ...door, turn: (on) => window.bionet.adviser.turn(on).then(setDoor), copy: () => window.bionet.adviser.copy(), renew: () => window.bionet.adviser.renew().then(setDoor) }} />;
+  return [door, setDoor];
+}
+
+/**
+ * The adviser this device hosts: the card where it is let in and its door opened, and the lab with
+ * the view following it. The door is the main process's, the card and the strip are the panels' and
+ * the scene is the one every tool is shown in; this only passes one to the other.
+ */
+function AdviserTab({ door, setDoor }: { door: DoorState; setDoor: (door: DoorState) => void }) {
+  const lab = useLab()?.lab;
+  const [watching, setWatching] = useState(false);
+  const [following, setFollowing] = useState(true);
+  const [stop, setStop] = useState<TourStop>({ at: "lab", focus: { place: null } });
+  const last = door.seen.at(-1) ?? null;
+  // The latest thing it did that has a place in the lab. Reading a list has none, and leaves the view where it was.
+  const placed = [...door.seen].reverse().find((one) => one.shows !== null && one.shows !== undefined);
+  useEffect(() => {
+    if (following && placed !== undefined && lab !== null && lab !== undefined) setStop(stopFor(placed.shows as ShownAt, lab));
+  }, [placed?.at, placed?.tool, following]);
+  if (watching) {
+    return (
+      <div className="watching">
+        <AdviserStrip last={last} following={following} onFollow={setFollowing} onBack={() => setWatching(false)} />
+        <LabAt stop={stop} />
+      </div>
+    );
+  }
+  return <Adviser onWatch={() => setWatching(true)}
+                  door={{ ...door, turn: (on) => window.bionet.adviser.turn(on).then(setDoor), copy: () => window.bionet.adviser.copy(), renew: () => window.bionet.adviser.renew().then(setDoor) }} />;
 }
 
 /** The lab in the main process, as the hooks reach it. */
@@ -115,61 +140,39 @@ function Scene() {
 type PcrTubes = { template: string; forward: string; reverse: string };
 
 /**
- * One tool, shown in the lab: the room, with the view gone to the machine the tool is used at and
- * the tool beside it. Every tool is this same thing, so choosing another one moves the camera from
- * one machine to the next instead of putting a new picture up. A tool whose machine the lab has not
- * placed has nowhere in the room to go, and only then is its machine shown standing alone.
+ * Every tool, each in the lab at the machine it is used at. They are all the one scene, so choosing
+ * another moves the view from one machine to the next instead of putting a new picture up.
  */
-function ToolInLab({ tool, onPcr, pcrOn }: {
-  tool: "sequences" | "primers" | "pcr" | "digest" | "ligation";
-  /** Told the tubes when primers have been designed and somebody goes on to the PCR. */
-  onPcr?: (tubes: PcrTubes) => void;
-  /** The tubes to open the PCR on, when it was come to from a design. */
-  pcrOn?: PcrTubes | null;
-}) {
-  const lab = useLab()?.lab;
-  const found = lab === null || lab === undefined || tool === "sequences" || tool === "primers" ? null : instrumentFor(lab, tool);
-  // Kept the same from one draw to the next, so that a tool is not set working again by being looked at.
-  const stood = useMemo(() => (found === null ? null : { id: found.id, name: found.name }), [found?.id, found?.name]);
-  const pcr = usePcrBench({ instrument: tool === "pcr" ? stood : null, ...(pcrOn === null || pcrOn === undefined ? {} : { start: pcrOn }) });
-  // Primers are designed at a desk, so there is no machine to walk to: the room stays, looking at
-  // the template's tube, with the pair drawn on the molecule over it.
-  const primers = usePrimerBench(onPcr === undefined ? {} : { onPcr });
-  const digest = useDigestBench({ instrument: tool === "digest" ? stood : null });
-  const ligation = useLigationBench({ instrument: tool === "ligation" ? stood : null });
-  if (lab === null || lab === undefined) return null;
-  const bench = tool === "pcr" ? pcr : tool === "digest" ? digest : tool === "ligation" ? ligation : null;
-  const drawn = lab.places.some((one) => !one.retired);
-  if (bench !== null && stood === null) return <div className="scene"><InstrumentStage {...bench.stage}>{bench.panel}</InstrumentStage></div>;
-  if (bench === null && !drawn) return tool === "primers" ? <>{primers.panel}</> : <SequencesTool />;
-  const desk = tool === "primers" ? primers.desk : null;
-  return (
-    <div className="scene">
-      <LabView lab={lab} name={lab.name ?? "Lab"}
-               {...(bench !== null && stood !== null ? { focus: { place: stood.id }, using: { place: stood.id, ...bench.stage, panel: bench.panel } }
-                 : desk !== null ? { focus: desk.focus ?? { place: null }, wide: true, beside: primers.panel }
-                 : { focus: { place: null }, wide: true, beside: <div className="bionet"><SequencesTool /></div> })}
-               molecule={(item) => { if (desk !== null && desk.focus?.item === item && desk.molecule !== null) return desk.molecule; const part = lab.parts.find((one) => one.checksum === lab.items.find((each) => each.item === item)?.part); return part === undefined ? null : moleculeOf(part); }} />
-    </div>
-  );
-}
-
-/** Every tool, each in the lab at the machine it is used at. */
 function Bench() {
   // A pair that has been designed and has arrived leads straight on to its PCR, opened on those tubes.
   const [pcrOn, setPcrOn] = useState<PcrTubes | null>(null);
-  return <Tools views={{ sequences: <ToolInLab tool="sequences" />,
-                         primers: (go) => <ToolInLab tool="primers" onPcr={(tubes) => { setPcrOn(tubes); go("pcr"); }} />,
-                         pcr: <ToolInLab tool="pcr" pcrOn={pcrOn} />, digest: <ToolInLab tool="digest" />, ligation: <ToolInLab tool="ligation" /> }} />;
+  return <Tools views={{ sequences: <LabAt stop={{ at: "sequences" }} />,
+                         primers: (go) => <LabAt stop={{ at: "primers" }} onPcr={(tubes) => { setPcrOn(tubes); go("pcr"); }} />,
+                         pcr: <LabAt stop={{ at: "pcr", ...(pcrOn === null ? {} : { start: pcrOn }) }} />,
+                         digest: <LabAt stop={{ at: "digest" }} />, ligation: <LabAt stop={{ at: "ligation" }} /> }} />;
+}
+
+/** The window: the lab's own tabs, and the ones this app adds. */
+function App() {
+  const [door, setDoor] = useDoor();
+  // Said on the tab while the adviser is at it, so that it is noticed from anywhere in the window.
+  const [, tick] = useState(0);
+  useEffect(() => { const timer = setInterval(() => tick((was) => was + 1), 15_000); return () => clearInterval(timer); }, []);
+  const latest = door.seen.at(-1);
+  const atWork = latest !== undefined && Date.now() - Date.parse(latest.at) < 90_000;
+  return (
+    <LabWindow tab={location.hash.slice(1) || "freezer"} copy={window.bionet.copy} save={window.bionet.save}
+               extra={[{ id: "scene", label: "Lab", view: <Scene /> }, { id: "tools", label: "Tools", view: <Bench /> },
+                       { id: "adviser", label: atWork ? "Adviser · at work" : "Adviser", view: <AdviserTab door={door} setDoor={setDoor} /> },
+                       { id: "glossary", label: "Glossary", view: <section className="card"><ReviewSheet /></section> },
+                       { id: "demo", label: "Demo", view: <Demo /> }]} />
+  );
 }
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <LabProvider source={bridge()}>
-      <LabWindow tab={location.hash.slice(1) || "freezer"} copy={window.bionet.copy} save={window.bionet.save} extra={[{ id: "scene", label: "Lab", view: <Scene /> }, { id: "tools", label: "Tools", view: <Bench /> },
-                         { id: "adviser", label: "Adviser", view: <AdviserTab /> },
-                         { id: "glossary", label: "Glossary", view: <section className="card"><ReviewSheet /></section> },
-                         { id: "demo", label: "Demo", view: <Demo /> }]} />
+      <App />
     </LabProvider>
   </StrictMode>,
 );
