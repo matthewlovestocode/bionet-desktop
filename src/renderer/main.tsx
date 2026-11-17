@@ -150,6 +150,7 @@ function Bench({ tool }: { tool?: ToolName | DeskTool }) {
   return <Tools {...(tool === undefined ? {} : { tool })} views={{ sequences: <LabAt stop={{ at: "sequences" }} />,
                          assembly: <LabAt stop={{ at: "assembly" }} />,
                          codons: <LabAt stop={{ at: "codons" }} />,
+                         construct: <LabAt stop={{ at: "construct" }} />,
                          verify: <LabAt stop={{ at: "verify" }} />,
                          primers: (go) => <LabAt stop={{ at: "primers" }} onPcr={(tubes) => { setPcrOn(tubes); go("pcr"); }} />,
                          pcr: <LabAt stop={{ at: "pcr", ...(pcrOn === null ? {} : { start: pcrOn }) }} />,
