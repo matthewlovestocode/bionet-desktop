@@ -3,10 +3,10 @@
  * comes from `@biolibs/bionet-panels`, and the colours come from `@biolibs/bionet-theme`. All this
  * file does is join them, by making the bridge to the main process look like any other lab.
  */
-import { StrictMode, useMemo, useState } from "react";
+import { StrictMode, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { Action, Answer, LabSnapshot, LabSource } from "@biolibs/bionet-client";
-import { LabWindow } from "@biolibs/bionet-panels";
+import { Adviser, LabWindow, type AdviserSeen } from "@biolibs/bionet-panels";
 import { LabProvider, useAct, useLab } from "@biolibs/bionet-react";
 import { InstrumentStage, LabView, type NewPlace, type Standing } from "@biolibs/bionet-scene";
 import { Demo } from "@biolibs/bionet-demo";
@@ -28,9 +28,32 @@ declare global {
       do: (action: Action, payload?: unknown) => Promise<Answer>;
       onState: (listener: (state: LabSnapshot) => void) => () => void;
       copy: (words: string) => Promise<void>;
+      adviser: {
+        state: () => Promise<DoorState>;
+        turn: (on: boolean) => Promise<DoorState>;
+        copy: () => Promise<boolean>;
+        renew: () => Promise<DoorState>;
+        onState: (listener: (state: DoorState) => void) => () => void;
+      };
       save: (name: string, text: string) => Promise<boolean>;
     };
   }
+}
+
+/** The adviser's door as the main process reports it: whether it is open, where, and what came through. */
+interface DoorState { on: boolean; url: string | null; seen: AdviserSeen[] }
+
+/**
+ * The adviser this device hosts, with the door the main process keeps for it. The door is the main
+ * process's and the card is the panels'; this only passes one to the other.
+ */
+function AdviserTab() {
+  const [door, setDoor] = useState<DoorState>({ on: false, url: null, seen: [] });
+  useEffect(() => {
+    void window.bionet.adviser.state().then(setDoor);
+    return window.bionet.adviser.onState(setDoor);
+  }, []);
+  return <Adviser door={{ ...door, turn: (on) => window.bionet.adviser.turn(on).then(setDoor), copy: () => window.bionet.adviser.copy(), renew: () => window.bionet.adviser.renew().then(setDoor) }} />;
 }
 
 /** The lab in the main process, as the hooks reach it. */
@@ -144,6 +167,7 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <LabProvider source={bridge()}>
       <LabWindow tab={location.hash.slice(1) || "freezer"} copy={window.bionet.copy} save={window.bionet.save} extra={[{ id: "scene", label: "Lab", view: <Scene /> }, { id: "tools", label: "Tools", view: <Bench /> },
+                         { id: "adviser", label: "Adviser", view: <AdviserTab /> },
                          { id: "glossary", label: "Glossary", view: <section className="card"><ReviewSheet /></section> },
                          { id: "demo", label: "Demo", view: <Demo /> }]} />
     </LabProvider>

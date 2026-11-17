@@ -11,9 +11,10 @@
  * for the lab's state and ask for one of a fixed list of things to be done, and that is all.
  */
 import { BrowserWindow, app, clipboard, dialog, ipcMain, nativeTheme, safeStorage } from "electron";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { agentTools, newAgentToken, serveAgent } from "@biolibs/bionet-agent";
 import { Lab, perform } from "@biolibs/bionet-client";
 import { sqliteStore } from "@biolibs/bionet-client/sqlite";
 import { COLOURS } from "@biolibs/bionet-theme";
@@ -47,6 +48,21 @@ const keys = {
   },
   async save(/** @type {string} */ exported) {
     writeFileSync(keys.path(), await safeStorage.encryptStringAsync(exported), { mode: 0o600 });
+  },
+};
+
+/**
+ * The key of an adviser this device hosts, sealed the same way and kept apart from the device's own:
+ * what an adviser writes is signed with this and never with the person's key.
+ */
+const adviserKeys = {
+  path: () => join(app.getPath("userData"), "adviser.key"),
+  async load() {
+    if (!existsSync(adviserKeys.path())) return null;
+    return (await safeStorage.decryptStringAsync(readFileSync(adviserKeys.path()))).result;
+  },
+  async save(/** @type {string} */ exported) {
+    writeFileSync(adviserKeys.path(), await safeStorage.encryptStringAsync(exported), { mode: 0o600 });
   },
 };
 
@@ -91,7 +107,7 @@ app.whenReady().then(async () => {
       return;
     }
   }
-  const lab = await new Lab({ store: sqliteStore(app.getPath("userData")), keys }).open();
+  const lab = await new Lab({ store: sqliteStore(app.getPath("userData")), keys, adviserKeys }).open();
 
   // The door between the window and the lab. `perform` does only what is on the client's own list.
   /** @param {string} action @param {unknown} payload */
@@ -99,6 +115,67 @@ app.whenReady().then(async () => {
   ipcMain.handle("bionet:state", () => lab.snapshot());
   ipcMain.handle("bionet:do", (_event, action, payload) => act(String(action), payload));
   ipcMain.handle("bionet:copy", (_event, words) => clipboard.writeText(String(words).slice(0, 5_000)));
+
+  // The adviser's door: a way in for an agent, on this machine only, shut until a person opens it.
+  // The window can open and shut it and see where it is. It is never given the token: asking for
+  // the way to connect puts it on the clipboard, from here, for the person to hand to the agent.
+  const door = { settings: join(app.getPath("userData"), "adviser-door.json"), token: join(app.getPath("userData"), "adviser.token") };
+  /** @type {{ url: string, port: number, close: () => Promise<void> } | null} */
+  let serving = null;
+  /** What the adviser has lately done, newest last, for the window to show. */
+  /** @type {{ tool: string, ok: boolean, at: string, shows: unknown }[]} */
+  const seen = [];
+  const doorState = () => ({ on: serving !== null, url: serving?.url ?? null, seen });
+  const tellDoor = () => { for (const one of BrowserWindow.getAllWindows()) if (!one.isDestroyed()) one.webContents.send("bionet:adviser", doorState()); };
+  const tokenNow = async () => {
+    if (!existsSync(door.token)) writeFileSync(door.token, await safeStorage.encryptStringAsync(newAgentToken()), { mode: 0o600 });
+    return (await safeStorage.decryptStringAsync(readFileSync(door.token))).result;
+  };
+  const tools = agentTools(lab, { watch: (call) => {
+    seen.push({ tool: call.tool, ok: call.ok, at: new Date().toISOString(), shows: call.shows });
+    if (seen.length > 30) seen.shift();
+    tellDoor();
+  } });
+  /** @param {boolean} on */
+  const turnDoor = async (on) => {
+    if (on && serving === null) {
+      const kept = existsSync(door.settings) ? JSON.parse(readFileSync(door.settings, "utf8")) : {};
+      const token = await tokenNow();
+      // The same port as last time if it is free, so that an agent set up once stays set up.
+      try { serving = await serveAgent({ tools, token, port: Number.isInteger(kept.port) ? kept.port : 0, version: app.getVersion() }); }
+      catch { serving = await serveAgent({ tools, token, version: app.getVersion() }); }
+      writeFileSync(door.settings, JSON.stringify({ on: true, port: serving.port }), { mode: 0o600 });
+    } else if (!on && serving !== null) {
+      await serving.close();
+      serving = null;
+      const kept = existsSync(door.settings) ? JSON.parse(readFileSync(door.settings, "utf8")) : {};
+      writeFileSync(door.settings, JSON.stringify({ ...kept, on: false }), { mode: 0o600 });
+    }
+    tellDoor();
+    return doorState();
+  };
+  ipcMain.handle("bionet:adviser:state", () => doorState());
+  ipcMain.handle("bionet:adviser:turn", (_event, on) => turnDoor(on === true));
+  ipcMain.handle("bionet:adviser:copy", async () => {
+    if (serving === null) return false;
+    clipboard.writeText(`claude mcp add --transport http bionet ${serving.url} --header "Authorization: Bearer ${await tokenNow()}"`);
+    return true;
+  });
+  // A new token shuts out whatever had the old one. The door is shut with it, to be opened again by hand.
+  ipcMain.handle("bionet:adviser:renew", async () => {
+    await turnDoor(false);
+    rmSync(door.token, { force: true });
+    return doorState();
+  });
+  // It opens by itself only if a person left it open.
+  if (existsSync(door.settings) && JSON.parse(readFileSync(door.settings, "utf8")).on === true) await turnDoor(true);
+  // For trying the app without a person, and only then: open the door and say where it is.
+  const tellTo = flag("adviser-to");
+  if (tellTo !== null && flag("script") !== null) {
+    await turnDoor(true);
+    writeFileSync(tellTo, JSON.stringify({ url: serving?.url, token: await tokenNow() }), { mode: 0o600 });
+  }
+  app.on("before-quit", () => { void serving?.close(); });
 
   // Handing over a file, such as the sealed key. The person chooses where it goes; the window only
   // ever supplies a name to suggest and the text, and learns whether it was saved.
