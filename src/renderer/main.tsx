@@ -6,7 +6,7 @@
 import { StrictMode, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { Action, Answer, LabSnapshot, LabSource } from "@biolibs/bionet-client";
-import { Adviser, AdviserStrip, LabWindow, Strains, type AdviserSeen } from "@biolibs/bionet-panels";
+import { Adviser, AdviserStrip, LabWindow, Specimens, Strains, type AdviserSeen } from "@biolibs/bionet-panels";
 import { LabProvider, useAct, useLab } from "@biolibs/bionet-react";
 import { LabView, type NewPlace, type Standing } from "@biolibs/bionet-scene";
 import { Demo, LabAt, stopFor, type ShownAt, type TourStop } from "@biolibs/bionet-demo";
@@ -163,6 +163,7 @@ function App() {
   const [door, setDoor] = useDoor();
   const lab = useLab()?.lab;
   const strains = lab?.strains.length ?? 0;
+  const unknown = lab?.specimens.filter((one) => one.is === null).length ?? 0;
   // How many steps could be carried out now, which is the one number worth seeing from anywhere.
   const ready = lab === null || lab === undefined ? 0 : planOfWork(lab).ready.length;
   // Where the window has been sent, and what to open when it gets there. A step of the work knows
@@ -183,6 +184,7 @@ function App() {
     <LabWindow tab={location.hash.slice(1) || "freezer"} {...(sent === null ? {} : { at: sent.tab })}
                copy={window.bionet.copy} save={window.bionet.save}
                extra={[{ id: "strains", label: `Strains · ${strains}`, view: <Strains /> },
+                       { id: "specimens", label: unknown > 0 ? `Unidentified · ${unknown}` : "Unidentified", view: <Specimens /> },
                        { id: "work", label: ready > 0 ? `Work · ${ready} ready` : "Work", view: <WorkToDo onOpen={(plan) => goAndDo(plan.kind)} /> },
                        { id: "scene", label: "Lab", view: <Scene /> }, { id: "tools", label: "Tools", view: <Bench {...(sent?.tool === undefined ? {} : { tool: sent.tool })} /> },
                        { id: "adviser", label: atWork ? "Adviser · at work" : "Adviser", view: <AdviserTab door={door} setDoor={setDoor} /> },
