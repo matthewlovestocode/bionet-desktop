@@ -190,8 +190,12 @@ app.whenReady().then(async () => {
     return true;
   });
 
+  // The window opens at a size given as "--size=720x780", so that a layout which changes with the
+  // width can be looked at at the width it changes under, rather than taken on trust.
+  const asked = /^(\d{3,5})x(\d{3,5})$/.exec(flag("size") ?? "");
   const window = new BrowserWindow({
-    width: 1100, height: 780, minWidth: 720, minHeight: 520, title: "Bionet",
+    width: asked === null ? 1100 : Number(asked[1]), height: asked === null ? 780 : Number(asked[2]),
+    minWidth: 720, minHeight: 520, title: "Bionet",
     backgroundColor: COLOURS[nativeTheme.shouldUseDarkColors ? "dark" : "light"].ground,
     icon,
     webPreferences: { preload: join(here, "preload.cjs"), contextIsolation: true, sandbox: true, nodeIntegration: false },

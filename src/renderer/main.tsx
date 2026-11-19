@@ -183,13 +183,14 @@ function App() {
   return (
     <LabWindow tab={location.hash.slice(1) || "freezer"} {...(sent === null ? {} : { at: sent.tab })}
                copy={window.bionet.copy} save={window.bionet.save}
-               extra={[{ id: "strains", label: `Strains · ${strains}`, view: <Strains /> },
-                       { id: "specimens", label: unknown > 0 ? `Unidentified · ${unknown}` : "Unidentified", view: <Specimens /> },
-                       { id: "work", label: ready > 0 ? `Work · ${ready} ready` : "Work", view: <WorkToDo onOpen={(plan) => goAndDo(plan.kind)} /> },
-                       { id: "scene", label: "Lab", view: <Scene /> }, { id: "tools", label: "Tools", view: <Bench {...(sent?.tool === undefined ? {} : { tool: sent.tool })} /> },
-                       { id: "adviser", label: atWork ? "Adviser · at work" : "Adviser", view: <AdviserTab door={door} setDoor={setDoor} /> },
-                       { id: "glossary", label: "Glossary", view: <section className="card"><ReviewSheet /></section> },
-                       { id: "demo", label: "Demo", view: <Demo /> }]} />
+               extra={[{ id: "strains", group: "What is here", label: `Strains · ${strains}`, view: <Strains /> },
+                       { id: "specimens", group: "What is here", label: unknown > 0 ? `Unidentified · ${unknown}` : "Unidentified", view: <Specimens /> },
+                       { id: "work", group: "At the bench", label: ready > 0 ? `Work · ${ready} ready` : "Work", view: <WorkToDo onOpen={(plan) => goAndDo(plan.kind)} /> },
+                       { id: "scene", group: "At the bench", label: "Lab", view: <Scene /> },
+                       { id: "tools", group: "At the bench", label: "Tools", view: <Bench {...(sent?.tool === undefined ? {} : { tool: sent.tool })} /> },
+                       { id: "adviser", group: "The lab", label: atWork ? "Adviser · at work" : "Adviser", view: <AdviserTab door={door} setDoor={setDoor} /> },
+                       { id: "glossary", group: "Reference", label: "Glossary", view: <section className="card"><ReviewSheet /></section> },
+                       { id: "demo", group: "Reference", label: "Demo", view: <Demo /> }]} />
   );
 }
 
