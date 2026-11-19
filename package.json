@@ -19,7 +19,7 @@
     "@biolibs/bionet-agent": "^0.1.8",
     "@biolibs/bionet-client": "^0.2.14",
     "@biolibs/bionet-demo": "^0.1.8",
-    "@biolibs/bionet-panels": "^0.3.16",
+    "@biolibs/bionet-panels": "^0.3.17",
     "@biolibs/bionet-react": "^0.2.0",
     "@biolibs/bionet-scene": "^0.3.7",
     "@biolibs/bionet-theme": "^0.1.0",
