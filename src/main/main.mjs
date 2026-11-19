@@ -228,6 +228,7 @@ app.whenReady().then(async () => {
         .replace(/\{\{place(\d+)\}\}/g, (_all, at) => lab.snapshot().lab?.places[Number(at)]?.place ?? "")
         .replace(/\{\{strain(\d+)\}\}/g, (_all, at) => lab.snapshot().lab?.strains[Number(at)]?.strain ?? "")
         .replace(/\{\{specimen(\d+)\}\}/g, (_all, at) => lab.snapshot().lab?.specimens[Number(at)]?.specimen ?? "")
+        .replace(/\{\{expect(\d+)\}\}/g, (_all, at) => lab.snapshot().lab?.expectations[Number(at)]?.expect ?? "")
         .replace(/\{\{plan(\d+)\}\}/g, (_all, at) => lab.snapshot().lab?.plans[Number(at)]?.plan ?? ""));
       const answer = await act(action, payload);
       console.log(`${action}: ${answer.ok ? "ok" : answer.error}`);
