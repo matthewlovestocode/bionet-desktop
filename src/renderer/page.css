@@ -2,15 +2,20 @@
 html, body, #root { height: 100%; }
 body { margin: 0; background: var(--bionet-ground); }
 /* The drawing of the lab takes what is left of the window under the tabs. */
-.scene { height: calc(100vh - 11rem); min-height: 22rem; border-radius: 10px; overflow: hidden; }
+.scene { position: relative; height: calc(100vh - 11rem); min-height: 22rem; border-radius: 10px; overflow: hidden; }
 /* Watching the adviser: a strip saying what it is doing, and the lab under it. */
 .watching .scene { height: calc(100vh - 17rem); }
 .watching .adviserstrip { margin-bottom: .6rem; }
 .watching .adviserstrip p { margin: 0; flex: 1; }
 
-/* A lab founded before the kit existed, and what it is missing of it. */
-.scene .kit { position: absolute; left: 1rem; top: 1rem; right: 1rem; z-index: 2; padding: .6rem .9rem; border-radius: 10px;
-  border: 1px solid var(--bionet-rule); background: color-mix(in srgb, var(--bionet-surface) 94%, transparent) }
+/* A lab founded before the kit existed, or a room too small for what is in it. It sits over the
+   scene as a bar, so `.bionet` — which is a full-height panel with a background of its own — has
+   to be told it is not one here, or it covers the room it is talking about. */
+.scene .kit { position: absolute; left: 1rem; top: 4.6rem; z-index: 2; height: auto; width: auto;
+  max-width: min(64rem, calc(100% - 2rem)); padding: .55rem .9rem; border-radius: 10px;
+  border: 1px solid var(--bionet-rule); background: color-mix(in srgb, var(--bionet-surface) 94%, transparent);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--bionet-ground) 60%, transparent) }
 .scene .kit p { margin: 0 }
-.scene .kit p + p { margin-top: .4rem; color: var(--bionet-good) }
-.scene .kit button { margin-left: .4rem }
+.scene .kit p + p { margin-top: .4rem }
+.scene .kit p[role="status"] { color: var(--bionet-good) }
+.scene .kit button { margin-left: .5rem }

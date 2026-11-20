@@ -7,9 +7,10 @@ import { StrictMode, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { Action, Answer, LabSnapshot, LabSource } from "@biolibs/bionet-client";
 import { Adviser, AdviserStrip, LabWindow, Specimens, Strains, type AdviserSeen } from "@biolibs/bionet-panels";
-import { STANDARD_KIT } from "@biolibs/bionet-client";
+import { missingKit } from "@biolibs/bionet-client";
 import { LabProvider, useAct, useLab } from "@biolibs/bionet-react";
 import { LabView, type NewPlace, type Standing } from "@biolibs/bionet-scene";
+import { DEFAULT_SIZE, INSTRUMENT_SIZE, roomFor } from "@biolibs/bionet-space";
 import { Demo, LabAt, stopFor, type ShownAt, type TourStop } from "@biolibs/bionet-demo";
 import { InstrumentTool, Tools, WorkToDo, moleculeOf, planOfWork, toolFor, useDigestBench, useInductionBench, useLigationBench, usePcrBench,
          useElectroBench, useImagerBench, useSpectroBench, useSpinBench, type DeskTool, type ToolName } from "@biolibs/bionet-tools";
@@ -133,11 +134,34 @@ function Scene() {
   // A lab founded before the kit existed has none of it: furnishing only ever happened at founding,
   // so there was no way to ask for it afterwards. What it would add is worked out here rather than
   // assumed, since a lab that has most of it should be offered the rest and not the lot.
-  const here = new Set(lab.places.map((one) => one.name.trim().toLowerCase()));
-  const missing = STANDARD_KIT.filter((one) => !here.has(one.name.trim().toLowerCase()));
+  // Asked of the same function that does the writing, so what this offers is what that adds.
+  const missing = missingKit(lab).map((one) => one.place);
+  // A room stood by hand keeps the size it was given, so a lab that has grown since can end up
+  // holding more than its walls take — which is not a thing the room can notice about itself.
+  const room = lab.places.find((one) => one.kind === "room" && !one.retired);
+  const onTheFloor = room === undefined ? [] : lab.places.filter((one) => one.parent === room.place && !one.retired);
+  const sizeOf = (one: (typeof onTheFloor)[number]): readonly [number, number, number] => {
+    const stood = one.standing;
+    if (stood != null) return [stood.size[0] / 1000, stood.size[1] / 1000, stood.size[2] / 1000];
+    const model = one.fields["model"];
+    return (typeof model === "string" ? INSTRUMENT_SIZE[model] : undefined) ?? DEFAULT_SIZE[one.kind] ?? [0.5, 0.5, 0.5];
+  };
+  const wants = onTheFloor.length === 0 ? null : roomFor(onTheFloor.map(sizeOf));
+  const roomIs = room?.standing == null ? null
+    : [room.standing.size[0] / 1000, room.standing.size[1] / 1000, room.standing.size[2] / 1000] as const;
+  const cramped = room !== undefined && roomIs !== null && wants !== null
+    && (roomIs[0] < wants[0] - 0.01 || roomIs[2] < wants[2] - 0.01);
   // An instrument the app has no tool for still has its record to show, and that is a page of its own.
   if (using !== null && bench === null) return <InstrumentTool place={using} onDone={leave} />;
   const working = using !== null && bench !== null;
+  const enlarge = async (place: string, at: readonly number[], size: readonly [number, number, number]): Promise<void> => {
+    // The room keeps where it is; only how big it is changes, and that is a fact about the room
+    // somebody recorded, so it is changed by asking rather than quietly.
+    const answer = await act("standPlace", {
+      place, standing: { position: [at[0]! / 1000, at[1]! / 1000, at[2]! / 1000], size: [...size] },
+    });
+    setFurnished(answer.ok ? `The room is ${size[0]} × ${size[2]} m now.` : answer.error);
+  };
   const furnish = async (): Promise<void> => {
     const answer = await act("furnish");
     setFurnished(answer.ok
@@ -146,12 +170,21 @@ function Scene() {
   };
   return (
     <div className="scene">
-      {!working && missing.length > 0 && (
+      {!working && (missing.length > 0 || cramped) && (
         <div className="bionet kit">
-          <p className="small">
-            This lab is missing {missing.length} of the usual kit: {missing.map((one) => one.name).join(", ")}.{" "}
-            <button type="button" onClick={() => void furnish()}>Put it in</button>
-          </p>
+          {missing.length > 0 && (
+            <p className="small">
+              This lab is missing {missing.length} of the usual kit: {missing.map((one) => one.name).join(", ")}.{" "}
+              <button type="button" onClick={() => void furnish()}>Put it in</button>
+            </p>
+          )}
+          {cramped && room !== undefined && roomIs !== null && wants !== null && (
+            <p className="small">
+              {room.name} is {roomIs[0]} × {roomIs[2]} m, and the {onTheFloor.length} things on its floor want {wants[0]} × {wants[2]} m
+              to stand round its walls with room to work in.{" "}
+              <button type="button" onClick={() => void enlarge(room.place, room.standing!.at, wants)}>Make it bigger</button>
+            </p>
+          )}
           {furnished !== null && <p className="small" role="status">{furnished}</p>}
         </div>
       )}
