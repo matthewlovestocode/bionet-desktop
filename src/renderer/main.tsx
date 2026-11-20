@@ -10,7 +10,7 @@ import { Adviser, AdviserStrip, LabWindow, Specimens, Strains, type AdviserSeen 
 import { LabProvider, useAct, useLab } from "@biolibs/bionet-react";
 import { LabView, type NewPlace, type Standing } from "@biolibs/bionet-scene";
 import { Demo, LabAt, stopFor, type ShownAt, type TourStop } from "@biolibs/bionet-demo";
-import { InstrumentTool, Tools, WorkToDo, moleculeOf, planOfWork, toolFor, useDigestBench, useLigationBench, usePcrBench,
+import { InstrumentTool, Tools, WorkToDo, moleculeOf, planOfWork, toolFor, useDigestBench, useInductionBench, useLigationBench, usePcrBench,
          type DeskTool, type ToolName } from "@biolibs/bionet-tools";
 import { ReviewSheet } from "@biolibs/glossary-react";
 import "@biolibs/bionet-theme/theme.css";
@@ -118,7 +118,10 @@ function Scene() {
   const pcr = usePcrBench({ instrument: tool === "pcr" ? at : null, onDone: leave });
   const digest = useDigestBench({ instrument: tool === "digest" ? at : null, onDone: leave });
   const ligation = useLigationBench({ instrument: tool === "ligation" ? at : null, onDone: leave });
-  const bench = tool === "pcr" ? pcr : tool === "digest" ? digest : tool === "ligation" ? ligation : null;
+  // The shaking incubator is worked where it stands like the rest. Leaving it out would mean walking
+  // up to one machine on the bench and getting a form instead of the machine.
+  const induction = useInductionBench({ instrument: tool === "induction" ? at : null, onDone: leave });
+  const bench = tool === "pcr" ? pcr : tool === "digest" ? digest : tool === "ligation" ? ligation : tool === "induction" ? induction : null;
   if (lab === null || lab === undefined) return null;
   // An instrument the app has no tool for still has its record to show, and that is a page of its own.
   if (using !== null && bench === null) return <InstrumentTool place={using} onDone={leave} />;

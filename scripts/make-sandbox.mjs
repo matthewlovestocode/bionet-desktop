@@ -83,8 +83,15 @@ const gene = cut(good.pGene.sequence, ["EcoRI", "BamHI"]).find((one) => one.leng
 
 console.log("\nWhat the materials do\n");
 const amplified = planPcr(good.pGene, good.forward.sequence, good.reverse.sequence);
-check("the primers make one product from pWren1", amplified.problem === null && amplified.products[0]?.length === 502,
-      amplified.problem ?? `${amplified.products[0]?.length} bp`);
+// What the product should be is not a number written here: the primers are designed to amplify the
+// gene, so the one product has to carry the whole of the gene. Asking it that way means the demo's
+// gene can change length without this going stale, and a product that misses part of it still fails.
+const wrenA = good.pGene.features.find((one) => one.label === "wrenA")?.parts[0];
+const codes = wrenA === undefined ? null : good.pGene.sequence.slice(wrenA.start, wrenA.end);
+check("the primers make one product carrying the whole gene from pWren1",
+      amplified.problem === null && amplified.products.length === 1 && codes !== null && codes !== ""
+      && amplified.products[0].sequence.includes(codes),
+      amplified.problem ?? `${amplified.products[0]?.length} bp around a gene of ${codes?.length ?? "?"}`);
 const strayPrimer = filler(22);
 check("a primer that is nowhere makes none", planPcr(good.pGene, good.forward.sequence, strayPrimer).problem !== null);
 const repeatF = twice.slice(20, 42);
@@ -121,15 +128,19 @@ const lab = await new Lab({
 await lab.setPerson("Ada");
 await lab.found({ name: "The Wren Lab" });
 
-const room = await lab.addPlace({ kind: "room", name: "Main lab" });
-const bench = await lab.addPlace({ kind: "bench", name: "The bench", parent: room });
-const freezer = await lab.addPlace({ kind: "freezer", name: "−80", parent: room });
-const box = await lab.addPlace({ kind: "box", name: "Box 1", parent: freezer, grid: { rows: 9, columns: 9 } });
-const machines = {
-  pcr: await lab.addPlace({ kind: "instrument", name: "Thermocycler", parent: bench, model: "thermocycler" }),
-  gel: await lab.addPlace({ kind: "instrument", name: "Gel station", parent: bench, model: "gel-station" }),
-  block: await lab.addPlace({ kind: "instrument", name: "Heat block", parent: bench, model: "heat-block" }),
+// The room, the benches, the cold storage and the machines come with the lab: founding one puts
+// the usual kit in it, so a sandbox that built its own would be a lab nobody is ever given.
+/** @param name - What it is called. @returns Its place ID. */
+const place = (name) => {
+  const found = lab.snapshot().lab?.places.find((one) => !one.retired && one.name === name);
+  if (found === undefined) throw new Error(`The lab was founded without ${name}.`);
+  return found.place;
 };
+const room = place("Main lab");
+const bench = place("Bench 1");
+const freezer = place("−80 freezer");
+const box = place("Box 1");
+const machines = { pcr: place("Thermocycler"), gel: place("Gel station"), block: place("Heat block") };
 
 let at = { row: 0, column: 0 };
 const onward = () => { at = at.column < 8 ? { row: at.row, column: at.column + 1 } : { row: at.row + 1, column: 0 }; };
