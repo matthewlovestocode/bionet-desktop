@@ -13,7 +13,7 @@ import { LabView, type NewPlace, type Standing } from "@biolibs/bionet-scene";
 import { DEFAULT_SIZE, INSTRUMENT_SIZE, roomFor } from "@biolibs/bionet-space";
 import { Demo, LabAt, stopFor, type ShownAt, type TourStop } from "@biolibs/bionet-demo";
 import { InstrumentTool, Tools, WorkToDo, moleculeOf, planOfWork, toolFor, useDigestBench, useInductionBench, useLigationBench, usePcrBench,
-         useElectroBench, useImagerBench, useSpectroBench, useSpinBench, type DeskTool, type ToolName } from "@biolibs/bionet-tools";
+         useElectroBench, useGrowBench, useImagerBench, useSpectroBench, useSpinBench, type DeskTool, type ToolName } from "@biolibs/bionet-tools";
 import { ReviewSheet } from "@biolibs/glossary-react";
 import "@biolibs/bionet-theme/theme.css";
 import "@biolibs/bionet-panels/panels.css";
@@ -127,8 +127,10 @@ function Scene() {
   const electro = useElectroBench({ instrument: tool === "electro" ? at : null, onDone: leave });
   const imager = useImagerBench({ instrument: tool === "imager" ? at : null, onDone: leave });
   const spin = useSpinBench({ instrument: tool === "spin" ? at : null, onDone: leave });
+  const grow = useGrowBench({ instrument: tool === "grow" ? at : null, onDone: leave });
   const bench = tool === "pcr" ? pcr : tool === "digest" ? digest : tool === "ligation" ? ligation : tool === "induction" ? induction
-              : tool === "spectro" ? spectro : tool === "electro" ? electro : tool === "imager" ? imager : tool === "spin" ? spin : null;
+              : tool === "spectro" ? spectro : tool === "electro" ? electro : tool === "imager" ? imager : tool === "spin" ? spin
+              : tool === "grow" ? grow : null;
   const [furnished, setFurnished] = useState<string | null>(null);
   if (lab === null || lab === undefined) return null;
   // A lab founded before the kit existed has none of it: furnishing only ever happened at founding,
@@ -219,7 +221,7 @@ function Bench({ tool }: { tool?: ToolName | DeskTool }) {
                          pcr: <LabAt stop={{ at: "pcr", ...(pcrOn === null ? {} : { start: pcrOn }) }} />,
                          digest: <LabAt stop={{ at: "digest" }} />, ligation: <LabAt stop={{ at: "ligation" }} />,
                          induction: <LabAt stop={{ at: "induction" }} />, spectro: <LabAt stop={{ at: "spectro" }} />,
-                         electro: <LabAt stop={{ at: "electro" }} />, imager: <LabAt stop={{ at: "imager" }} />, spin: <LabAt stop={{ at: "spin" }} /> }} />;
+                         electro: <LabAt stop={{ at: "electro" }} />, imager: <LabAt stop={{ at: "imager" }} />, spin: <LabAt stop={{ at: "spin" }} />, grow: <LabAt stop={{ at: "grow" }} /> }} />;
 }
 
 /** The window: the lab's own tabs, and the ones this app adds. */
@@ -239,6 +241,7 @@ function App() {
       : kind === "reading" ? "spectro" as const
       : kind === "imaging" ? "imager" as const
       : kind === "spin" ? "spin" as const
+      : kind === "incubation" ? "grow" as const
       : kind === "pcr" || kind === "digest" || kind === "ligation" || kind === "induction" ? kind
       : null;
     setSent(tool === null ? { tab: "strains" } : { tab: "tools", tool });
