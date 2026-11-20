@@ -11,7 +11,7 @@ import { LabProvider, useAct, useLab } from "@biolibs/bionet-react";
 import { LabView, type NewPlace, type Standing } from "@biolibs/bionet-scene";
 import { Demo, LabAt, stopFor, type ShownAt, type TourStop } from "@biolibs/bionet-demo";
 import { InstrumentTool, Tools, WorkToDo, moleculeOf, planOfWork, toolFor, useDigestBench, useInductionBench, useLigationBench, usePcrBench,
-         type DeskTool, type ToolName } from "@biolibs/bionet-tools";
+         useSpectroBench, type DeskTool, type ToolName } from "@biolibs/bionet-tools";
 import { ReviewSheet } from "@biolibs/glossary-react";
 import "@biolibs/bionet-theme/theme.css";
 import "@biolibs/bionet-panels/panels.css";
@@ -121,7 +121,9 @@ function Scene() {
   // The shaking incubator is worked where it stands like the rest. Leaving it out would mean walking
   // up to one machine on the bench and getting a form instead of the machine.
   const induction = useInductionBench({ instrument: tool === "induction" ? at : null, onDone: leave });
-  const bench = tool === "pcr" ? pcr : tool === "digest" ? digest : tool === "ligation" ? ligation : tool === "induction" ? induction : null;
+  const spectro = useSpectroBench({ instrument: tool === "spectro" ? at : null, onDone: leave });
+  const bench = tool === "pcr" ? pcr : tool === "digest" ? digest : tool === "ligation" ? ligation : tool === "induction" ? induction
+              : tool === "spectro" ? spectro : null;
   if (lab === null || lab === undefined) return null;
   // An instrument the app has no tool for still has its record to show, and that is a page of its own.
   if (using !== null && bench === null) return <InstrumentTool place={using} onDone={leave} />;
@@ -158,7 +160,7 @@ function Bench({ tool }: { tool?: ToolName | DeskTool }) {
                          primers: (go) => <LabAt stop={{ at: "primers" }} onPcr={(tubes) => { setPcrOn(tubes); go("pcr"); }} />,
                          pcr: <LabAt stop={{ at: "pcr", ...(pcrOn === null ? {} : { start: pcrOn }) }} />,
                          digest: <LabAt stop={{ at: "digest" }} />, ligation: <LabAt stop={{ at: "ligation" }} />,
-                         induction: <LabAt stop={{ at: "induction" }} /> }} />;
+                         induction: <LabAt stop={{ at: "induction" }} />, spectro: <LabAt stop={{ at: "spectro" }} /> }} />;
 }
 
 /** The window: the lab's own tabs, and the ones this app adds. */
@@ -174,7 +176,7 @@ function App() {
   const [sent, setSent] = useState<{ tab: string; tool?: ToolName | DeskTool } | null>(null);
   const goAndDo = (kind: string): void => {
     const tool = kind === "assembly" ? "assembly" as const
-      : kind === "pcr" || kind === "digest" || kind === "ligation" || kind === "induction" ? kind
+      : kind === "pcr" || kind === "digest" || kind === "ligation" || kind === "induction" || kind === "reading" ? (kind === "reading" ? "spectro" as const : kind)
       : null;
     setSent(tool === null ? { tab: "strains" } : { tab: "tools", tool });
   };
