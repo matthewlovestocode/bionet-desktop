@@ -11,7 +11,7 @@ import { LabProvider, useAct, useLab } from "@biolibs/bionet-react";
 import { LabView, type NewPlace, type Standing } from "@biolibs/bionet-scene";
 import { Demo, LabAt, stopFor, type ShownAt, type TourStop } from "@biolibs/bionet-demo";
 import { InstrumentTool, Tools, WorkToDo, moleculeOf, planOfWork, toolFor, useDigestBench, useInductionBench, useLigationBench, usePcrBench,
-         useElectroBench, useSpectroBench, type DeskTool, type ToolName } from "@biolibs/bionet-tools";
+         useElectroBench, useImagerBench, useSpectroBench, type DeskTool, type ToolName } from "@biolibs/bionet-tools";
 import { ReviewSheet } from "@biolibs/glossary-react";
 import "@biolibs/bionet-theme/theme.css";
 import "@biolibs/bionet-panels/panels.css";
@@ -123,8 +123,9 @@ function Scene() {
   const induction = useInductionBench({ instrument: tool === "induction" ? at : null, onDone: leave });
   const spectro = useSpectroBench({ instrument: tool === "spectro" ? at : null, onDone: leave });
   const electro = useElectroBench({ instrument: tool === "electro" ? at : null, onDone: leave });
+  const imager = useImagerBench({ instrument: tool === "imager" ? at : null, onDone: leave });
   const bench = tool === "pcr" ? pcr : tool === "digest" ? digest : tool === "ligation" ? ligation : tool === "induction" ? induction
-              : tool === "spectro" ? spectro : tool === "electro" ? electro : null;
+              : tool === "spectro" ? spectro : tool === "electro" ? electro : tool === "imager" ? imager : null;
   if (lab === null || lab === undefined) return null;
   // An instrument the app has no tool for still has its record to show, and that is a page of its own.
   if (using !== null && bench === null) return <InstrumentTool place={using} onDone={leave} />;
@@ -162,7 +163,7 @@ function Bench({ tool }: { tool?: ToolName | DeskTool }) {
                          pcr: <LabAt stop={{ at: "pcr", ...(pcrOn === null ? {} : { start: pcrOn }) }} />,
                          digest: <LabAt stop={{ at: "digest" }} />, ligation: <LabAt stop={{ at: "ligation" }} />,
                          induction: <LabAt stop={{ at: "induction" }} />, spectro: <LabAt stop={{ at: "spectro" }} />,
-                         electro: <LabAt stop={{ at: "electro" }} /> }} />;
+                         electro: <LabAt stop={{ at: "electro" }} />, imager: <LabAt stop={{ at: "imager" }} /> }} />;
 }
 
 /** The window: the lab's own tabs, and the ones this app adds. */
@@ -180,6 +181,7 @@ function App() {
     const tool = kind === "assembly" ? "assembly" as const
       : kind === "transformation" ? "electro" as const
       : kind === "reading" ? "spectro" as const
+      : kind === "imaging" ? "imager" as const
       : kind === "pcr" || kind === "digest" || kind === "ligation" || kind === "induction" ? kind
       : null;
     setSent(tool === null ? { tab: "strains" } : { tab: "tools", tool });
