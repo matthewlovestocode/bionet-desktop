@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@biolibs/bionet-agent": "^0.1.9",
-    "@biolibs/bionet-client": "^0.2.15",
+    "@biolibs/bionet-client": "^0.2.16",
     "@biolibs/bionet-demo": "^0.1.8",
     "@biolibs/bionet-panels": "^0.3.17",
     "@biolibs/bionet-react": "^0.2.0",
