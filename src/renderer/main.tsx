@@ -7,6 +7,7 @@ import { StrictMode, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { Action, Answer, LabSnapshot, LabSource } from "@biolibs/bionet-client";
 import { Adviser, AdviserStrip, LabWindow, Specimens, Strains, type AdviserSeen } from "@biolibs/bionet-panels";
+import { STANDARD_KIT } from "@biolibs/bionet-client";
 import { LabProvider, useAct, useLab } from "@biolibs/bionet-react";
 import { LabView, type NewPlace, type Standing } from "@biolibs/bionet-scene";
 import { Demo, LabAt, stopFor, type ShownAt, type TourStop } from "@biolibs/bionet-demo";
@@ -127,12 +128,33 @@ function Scene() {
   const spin = useSpinBench({ instrument: tool === "spin" ? at : null, onDone: leave });
   const bench = tool === "pcr" ? pcr : tool === "digest" ? digest : tool === "ligation" ? ligation : tool === "induction" ? induction
               : tool === "spectro" ? spectro : tool === "electro" ? electro : tool === "imager" ? imager : tool === "spin" ? spin : null;
+  const [furnished, setFurnished] = useState<string | null>(null);
   if (lab === null || lab === undefined) return null;
+  // A lab founded before the kit existed has none of it: furnishing only ever happened at founding,
+  // so there was no way to ask for it afterwards. What it would add is worked out here rather than
+  // assumed, since a lab that has most of it should be offered the rest and not the lot.
+  const here = new Set(lab.places.map((one) => one.name.trim().toLowerCase()));
+  const missing = STANDARD_KIT.filter((one) => !here.has(one.name.trim().toLowerCase()));
   // An instrument the app has no tool for still has its record to show, and that is a page of its own.
   if (using !== null && bench === null) return <InstrumentTool place={using} onDone={leave} />;
   const working = using !== null && bench !== null;
+  const furnish = async (): Promise<void> => {
+    const answer = await act("furnish");
+    setFurnished(answer.ok
+      ? `Put ${(answer.result as string[]).length} things in the lab: ${(answer.result as string[]).join(", ")}.`
+      : answer.error);
+  };
   return (
     <div className="scene">
+      {!working && missing.length > 0 && (
+        <div className="bionet kit">
+          <p className="small">
+            This lab is missing {missing.length} of the usual kit: {missing.map((one) => one.name).join(", ")}.{" "}
+            <button type="button" onClick={() => void furnish()}>Put it in</button>
+          </p>
+          {furnished !== null && <p className="small" role="status">{furnished}</p>}
+        </div>
+      )}
       <LabView lab={lab} name={lab.name ?? "Lab"}
                {...(working ? { focus: { place: using }, using: { place: using, ...bench.stage, panel: bench.panel } } : {
                  onStand: (place: string, standing: Standing | null) => act("standPlace", { place, standing }),

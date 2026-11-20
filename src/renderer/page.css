@@ -7,3 +7,10 @@ body { margin: 0; background: var(--bionet-ground); }
 .watching .scene { height: calc(100vh - 17rem); }
 .watching .adviserstrip { margin-bottom: .6rem; }
 .watching .adviserstrip p { margin: 0; flex: 1; }
+
+/* A lab founded before the kit existed, and what it is missing of it. */
+.scene .kit { position: absolute; left: 1rem; top: 1rem; right: 1rem; z-index: 2; padding: .6rem .9rem; border-radius: 10px;
+  border: 1px solid var(--bionet-rule); background: color-mix(in srgb, var(--bionet-surface) 94%, transparent) }
+.scene .kit p { margin: 0 }
+.scene .kit p + p { margin-top: .4rem; color: var(--bionet-good) }
+.scene .kit button { margin-left: .4rem }
